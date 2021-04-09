@@ -34,6 +34,9 @@ def get_vectors(matrixes):
     vectors = []
     for matrix in matrixes:
         vector = vectorize(matrix)
+        for i, element in enumerate(vector):
+            if element == 255:
+                vector[i] = 1
         vectors.append(vector)
     return vectors
 
@@ -50,5 +53,4 @@ file_path = 'datasets/handwritten_letters/Train/0/0.jpg'
 file_list = os.listdir('datasets/handwritten_letters/Train/A/')[0:10]
 
 matrixes = get_matrixes(file_list)
-vectors_ = get_vectors(matrixes)
-vectors = to_ones(vectors_)
+vectors = get_vectors(matrixes)
