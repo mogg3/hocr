@@ -2,6 +2,12 @@ import os
 import cv2 as cv
 
 
+class Character:
+    def __init__(self, vector, character):
+        self.vector = vector
+        self.character = character
+
+
 def get_matrix(file_path):
     img = cv.imread(file_path)
     edges = cv.Canny(img, 100, 200)
@@ -13,12 +19,15 @@ def get_matrix(file_path):
     return edges
 
 
-def get_matrixes(file_list):
+def get_dicts(file_path):
     matrixes = []
-    for file in file_list:
-        img = cv.imread(f"datasets/handwritten_letters/Train/0/{file}")
-        edges = cv.Canny(img, 100, 200)
-        matrixes.append(edges)
+    for char_folder in os.listdir(file_path):
+        for file in os.listdir(f"{file_path}/{char_folder}"):
+            img = cv.imread(f"datasets/handwritten_letters/Train/{char_folder}/{file}")
+            edges = cv.Canny(img, 100, 200)
+            dict = {'matrix': edges, 'character': char_folder}
+            matrixes.append(dict)
+        break
     return matrixes
 
 
@@ -49,8 +58,10 @@ def to_ones(vectors):
     return vectors
 
 
-file_path = 'datasets/handwritten_letters/Train/0/0.jpg'
-file_list = os.listdir('datasets/handwritten_letters/Train/A/')[0:10]
+file_path = 'datasets/handwritten_letters/Train'
 
-matrixes = get_matrixes(file_list)
-vectors = get_vectors(matrixes)
+dicts = get_dicts(file_path)
+#vectors = get_vectors(matrixes)
+
+# x = bildens vector
+# y = vilken bokstav som är skriven
