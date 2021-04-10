@@ -11,24 +11,20 @@ class Character:
 def get_matrix(file_path):
     img = cv.imread(file_path)
     edges = cv.Canny(img, 100, 200)
-    # plt.subplot(121), plt.imshow(img, cmap='gray')
-    # plt.title('Original Image'), plt.xticks([]), plt.yticks([])
-    # plt.subplot(122), plt.imshow(edges, cmap='gray')
-    # plt.title('Edge Image'), plt.xticks([]), plt.yticks([])
-    # plt.show()
     return edges
 
 
-def get_dicts(file_path):
-    matrixes = []
-    for char_folder in os.listdir(file_path):
-        for file in os.listdir(f"{file_path}/{char_folder}"):
+def get_dicts(path):
+    dicts = []
+    for char_folder in os.listdir(path):
+        file_path = f"{path}/{char_folder}"
+        for i, file in enumerate(os.listdir(file_path)):
             img = cv.imread(f"datasets/handwritten_letters/Train/{char_folder}/{file}")
             edges = cv.Canny(img, 100, 200)
             dict = {'matrix': edges, 'character': char_folder}
-            matrixes.append(dict)
-        break
-    return matrixes
+            dicts.append(dict)
+            print(f"{char_folder} - {i+1}/{len(os.listdir(file_path))}")
+    return dicts
 
 
 def vectorize(matrix):
@@ -39,15 +35,16 @@ def vectorize(matrix):
     return vector
 
 
-def get_vectors(matrixes):
-    vectors = []
-    for matrix in matrixes:
-        vector = vectorize(matrix)
+def get_training_data(dicts):
+    data = []
+    for dict in dicts:
+        vector = vectorize(dict['matrix'])
         for i, element in enumerate(vector):
             if element == 255:
                 vector[i] = 1
-        vectors.append(vector)
-    return vectors
+        char = Character(vector, dict['character'])
+        data.append(char)
+    return data
 
 
 def to_ones(vectors):
@@ -59,9 +56,8 @@ def to_ones(vectors):
 
 
 file_path = 'datasets/handwritten_letters/Train'
-
 dicts = get_dicts(file_path)
-#vectors = get_vectors(matrixes)
+training_data = get_training_data(dicts)
 
-# x = bildens vector
-# y = vilken bokstav som är skriven
+# x = vektoriserad bild
+# y = tecknet
