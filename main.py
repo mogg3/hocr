@@ -58,8 +58,11 @@ def to_ones(vectors):
 file_path = 'datasets/handwritten_letters/Train'
 limit = 10
 
-dicts = get_dicts(file_path, limit)
-training_data = get_training_data(dicts)
+#dicts = get_dicts(file_path, limit)
+#training_data = get_training_data(dicts)
+
+# Bokstav med minst bilder 4261, J
+# Bokstav med max bilder 65503, 0
 
 # x = vektoriserad bild
 # y = tecknet
