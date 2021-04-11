@@ -14,16 +14,16 @@ def get_matrix(file_path):
     return edges
 
 
-def get_dicts(path):
+def get_dicts(path, limit):
     dicts = []
     for char_folder in os.listdir(path):
         file_path = f"{path}/{char_folder}"
-        for i, file in enumerate(os.listdir(file_path)):
+        for i, file in enumerate(os.listdir(file_path)[0:limit]):
             img = cv.imread(f"datasets/handwritten_letters/Train/{char_folder}/{file}")
             edges = cv.Canny(img, 100, 200)
             dict = {'matrix': edges, 'character': char_folder}
             dicts.append(dict)
-            print(f"{char_folder} - {i+1}/{len(os.listdir(file_path))}")
+            #print(f"{char_folder} - {i+1}/{len(os.listdir(file_path))}")
     return dicts
 
 
@@ -56,7 +56,9 @@ def to_ones(vectors):
 
 
 file_path = 'datasets/handwritten_letters/Train'
-dicts = get_dicts(file_path)
+limit = 10
+
+dicts = get_dicts(file_path, limit)
 training_data = get_training_data(dicts)
 
 # x = vektoriserad bild
