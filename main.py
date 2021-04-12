@@ -64,8 +64,7 @@ validation_dicts = get_dicts(file_path, limit, 'Validation')
 training_data = get_data(training_dicts)
 validation_data = get_data(validation_dicts)
 
+# Character(vector (x), character (y))
+
 # Bokstav med minst bilder 4261, J
 # Bokstav med max bilder 65503, 0
-
-# x = vektoriserad bild
-# y = tecknet
