@@ -14,12 +14,12 @@ def get_matrix(file_path):
     return edges
 
 
-def get_dicts(path, limit):
+def get_dicts(path, limit, type):
     dicts = []
-    for char_folder in os.listdir(path):
-        file_path = f"{path}/{char_folder}"
+    for char_folder in os.listdir(f"{path}/{type}"):
+        file_path = f"{path}/{type}/{char_folder}"
         for i, file in enumerate(os.listdir(file_path)[0:limit]):
-            img = cv.imread(f"datasets/handwritten_letters/Train/{char_folder}/{file}")
+            img = cv.imread(f"datasets/handwritten_letters/{type}/{char_folder}/{file}")
             edges = cv.Canny(img, 100, 200)
             dict = {'matrix': edges, 'character': char_folder}
             dicts.append(dict)
@@ -35,7 +35,7 @@ def vectorize(matrix):
     return vector
 
 
-def get_training_data(dicts):
+def get_data(dicts):
     data = []
     for dict in dicts:
         vector = vectorize(dict['matrix'])
@@ -55,11 +55,14 @@ def to_ones(vectors):
     return vectors
 
 
-file_path = 'datasets/handwritten_letters/Train'
+file_path = 'datasets/handwritten_letters/'
 limit = 10
 
-#dicts = get_dicts(file_path, limit)
-#training_data = get_training_data(dicts)
+training_dicts = get_dicts(file_path, limit, 'Train')
+validation_dicts = get_dicts(file_path, limit, 'Validation')
+
+training_data = get_data(training_dicts)
+validation_data = get_data(validation_dicts)
 
 # Bokstav med minst bilder 4261, J
 # Bokstav med max bilder 65503, 0
