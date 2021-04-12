@@ -8,7 +8,7 @@ class Character:
         self.character = character
 
 
-def get_matrix(file_path):
+def to_matrix(file_path):
     img = cv.imread(file_path)
     edges = cv.Canny(img, 100, 200)
     return edges
