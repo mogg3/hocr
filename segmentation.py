@@ -73,7 +73,7 @@ def check_overlap(R1, R2):
 def get_overlapping_boxes(box, boxes):
     overlaps = []
     for i in range(len(boxes)):
-        if overlap(box, boxes[i]) and box != boxes[i]:
+        if check_overlap(box, boxes[i]) and box != boxes[i]:
             overlaps.append(boxes[i])
     return overlaps
 
@@ -81,7 +81,7 @@ def get_overlapping_boxes(box, boxes):
 def get_dicts(boxes):
     overlap_dict = []
     for i, box in enumerate(boxes):
-        dict_ = {i: get_overlaps(box, boxes)}
+        dict_ = {i: get_overlapping_boxes(box, boxes)}
         overlap_dict.append(dict_)
 
     return overlap_dict
