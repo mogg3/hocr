@@ -1,7 +1,6 @@
 import cv2 as cv
 import numpy as np
 
-
 class Rectangle:
     def __init__(self, x, y, width, height):
         self.x = x
@@ -28,9 +27,9 @@ def get_boxes(processed):
     for i, ctr in enumerate(sorted_ctrs):
         x, y, w, h = cv.boundingRect(ctr)
         boxes.append(Rectangle(x, y, w, h))
-        cv.rectangle(image,(x,y),( x + w, y + h ),(0, 255, 0),2)
-    cv.imshow('marked areas', image)
-    cv.waitKey(0)
+    #     cv.rectangle(image,(x,y),( x + w, y + h ),(0, 255, 0),1)
+    # cv.imshow('marked areas', image)
+    # cv.waitKey(0)
 
     boxes = check_erode(boxes)
     return boxes
@@ -89,8 +88,7 @@ def get_dicts(boxes):
 
 def show_boxes(boxes):
     for box in boxes:
-        cv.rectangle(image, (box.x, box.y), box.bottom_right, (0, 0, 255), 2)
-
+        cv.rectangle(image, (box.x, box.y), box.bottom_right, (0, 0, 255), 1)
     cv.imshow('marked areas', image)
     cv.waitKey(0)
 
