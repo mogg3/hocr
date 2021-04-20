@@ -63,19 +63,28 @@ def check_erode(boxes):
     return boxes
 
 
-def overlap(R1, R2):
+def check_overlap(R1, R2):
     if (R1.x >= (R2.width + R2.x)) or ((R1.width + R1.x) <= R2.x) or ((R1.y + R1.height) <= R2.y) or (R1.y >= (R2.y + R2.height)):
         return False
     else:
         return True
 
 
-def get_overlaps(box, boxes):
+def get_overlapping_boxes(box, boxes):
     overlaps = []
     for i in range(len(boxes)):
         if overlap(box, boxes[i]) and box != boxes[i]:
             overlaps.append(boxes[i])
     return overlaps
+
+
+def get_dicts(boxes):
+    overlap_dict = []
+    for i, box in enumerate(boxes):
+        dict_ = {i: get_overlaps(box, boxes)}
+        overlap_dict.append(dict_)
+
+    return overlap_dict
 
 
 def show_boxes(boxes):
@@ -86,21 +95,16 @@ def show_boxes(boxes):
     cv.waitKey(0)
 
 
-img_path = 'input2.tif'
+img_path = 'input.tif'
 image = cv.imread(img_path)
 
 processed = process_img(image)
 boxes = get_boxes(processed)
 boxes = clean_boxes(boxes)
 
+get_dicts(boxes)
 show_boxes(boxes)
 
-# dicts = []
-# for i, box in enumerate(boxes):
-#     dict_ = {i: get_overlaps(box, boxes)}
-#     dicts.append(dict_)
-#
-# print(dicts)
 
 
 
