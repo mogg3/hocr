@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-image = cv.imread('input.tif')
+image = cv.imread('input2.tif')
 
 gray = cv.cvtColor(image,cv.COLOR_BGR2GRAY)
 kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
@@ -23,5 +23,9 @@ for i, ctr in enumerate(sorted_ctrs):
     rectangle = cv.rectangle(image,(x,y),( x + w, y + h ),(90,0,255),2)
     cv.waitKey(0)
 
+for box in boxes:
+    print(box)
+
 cv.imshow('marked areas',image)
 cv.waitKey(0)
+
