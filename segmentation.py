@@ -28,20 +28,13 @@ def get_boxes(processed):
     for i, ctr in enumerate(sorted_ctrs):
         x, y, w, h = cv.boundingRect(ctr)
         boxes.append(Rectangle(x, y, w, h))
-        cv.rectangle(image,(x,y),( x + w, y + h ),(0, 255, 0),2)
-    cv.imshow('marked areas', image)
-    cv.waitKey(0)
 
     boxes = check_erode(boxes)
     return boxes
 
 
 def clean_boxes(boxes):
-    new_boxes = []
-    for box in boxes:
-        if box.height > 3:
-            new_boxes.append(box)
-    return new_boxes
+    return [box for box in boxes if box.height > 5 and box.width > 5]
 
 
 def check_erode(boxes):
@@ -73,39 +66,62 @@ def check_overlap(R1, R2):
 def get_overlapping_boxes(box, boxes):
     overlaps = []
     for i in range(len(boxes)):
-        if overlap(box, boxes[i]) and box != boxes[i]:
+        if check_overlap(box, boxes[i]) and box != boxes[i]:
             overlaps.append(boxes[i])
     return overlaps
 
 
-def get_dicts(boxes):
-    overlap_dict = []
-    for i, box in enumerate(boxes):
-        dict_ = {i: get_overlaps(box, boxes)}
-        overlap_dict.append(dict_)
+def inside(R1, R2):
+    if (R1.x < R2.x) and (R1.y < R2.y) and (R1.x + R1.width > R2.x + R2.width) and (R1.y + R1.height > R2.y + R2.height):
+        return True
+    else:
+        return False
 
-    return overlap_dict
+
+def get_dicts(boxes):
+    return {box: get_overlapping_boxes(box, boxes) for box in boxes if get_overlapping_boxes(box, boxes)}
 
 
 def show_boxes(boxes):
     for box in boxes:
-        cv.rectangle(image, (box.x, box.y), box.bottom_right, (0, 0, 255), 2)
+        cv.rectangle(image, (box.x, box.y), box.bottom_right, (0, 0, 255), 1)
 
     cv.imshow('marked areas', image)
     cv.waitKey(0)
 
 
-img_path = 'input.tif'
+def remove_inside_boxes():
+    for box in boxes:
+        for box_ in boxes:
+            if inside(box, box_) and box != box_:
+                boxes.remove(box_)
+    return boxes
+
+
+def divide_boxes(mean):
+    big_boxes = [box for box in boxes if box.width >= mean * 1.3]
+    for box in big_boxes:
+        print(f'{box.width} // {mean * 0.7} = {box.width // (mean * 0.7)}')
+        # Divide boxes
+        cv.rectangle(image, (box.x, box.y), box.bottom_right, (255, 0, 0), 1)
+
+    cv.imshow('marked areas', image)
+    cv.waitKey(0)
+
+
+def check_box_width():
+    box_width = sorted([box.width for box in boxes])
+    mean = np.mean(box_width)
+    if box_width[-1] >= mean*2.2:
+        divide_boxes(mean)
+
+
+img_path = 'input3.tif'
 image = cv.imread(img_path)
 
 processed = process_img(image)
 boxes = get_boxes(processed)
 boxes = clean_boxes(boxes)
-
-get_dicts(boxes)
+boxes = remove_inside_boxes()
+check_box_width()
 show_boxes(boxes)
-
-
-
-
-
