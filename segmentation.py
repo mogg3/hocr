@@ -30,7 +30,7 @@ def get_overlaps(box, boxes):
     return overlaps
 
 
-image = cv.imread('input2.tif')
+image = cv.imread('input.tif')
 
 gray = cv.cvtColor(image,cv.COLOR_BGR2GRAY)
 kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
@@ -53,7 +53,7 @@ for i, ctr in enumerate(sorted_ctrs):
     cv.rectangle(image,(x,y),( x + w, y + h ),(90,0,255),2)
 
 for box in boxes:
-    print(box)
+    print(box.width, box.height)
 
 cv.imshow('marked areas',image)
 cv.waitKey(0)
@@ -63,4 +63,4 @@ for i, box in enumerate(boxes):
     dict_ = {i: get_overlaps(box, boxes)}
     dicts.append(dict_)
 
-print(dicts)
+#print(dicts)
