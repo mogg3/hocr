@@ -98,9 +98,11 @@ def remove_inside_boxes(boxes):
 
 def divide_boxes(mean, boxes):
     new_boxes = []
+    boxes_to_remove = []
     for i, box in enumerate(boxes):
         n = box.width // (mean * 0.7)
         if n >= 2:
+            boxes_to_remove.append(box)
             for j in range(int(n)):
                 new_w = round((box.width / n))
                 new_x = round(box.x + (new_w * (j)))
@@ -108,6 +110,7 @@ def divide_boxes(mean, boxes):
                 new_h = box.height
                 new_box = Box(new_x, new_y, new_w, new_h, (255, 0, 0), 1)
                 new_boxes.append(new_box)
+    boxes = [box for box in boxes if box not in boxes_to_remove]
     return boxes + new_boxes
 
 
