@@ -1,6 +1,8 @@
 import cv2 as cv
 import numpy as np
 import os
+from PIL import Image
+import time
 
 
 class Box:
@@ -16,6 +18,9 @@ class Box:
         self.area = width * height
         self.color = color
         self.thickness = thickness
+
+    def __repr__(self):
+        return f'x = {self.x} y = {self.y} width = {self.width} height = {self.height}'
 
 
 def process_img(image):
@@ -137,8 +142,15 @@ def img_segmentation(img_path):
     boxes = remove_inside_boxes(boxes)
     boxes = check_mean_width(boxes)
     show_boxes(boxes, image)
+    return boxes, image
 
 
 img_path = 'input.tif'
+boxes, image = img_segmentation(img_path)
+cropped_images = []
 
-img_segmentation(img_path)
+for box in boxes:
+    crop_image = image[box.y:(box.y + box.height), box.x:(box.x + box.width)].copy()
+    cv.imshow("Cropped", crop_image)
+    cv.waitKey(0)
+
