@@ -1,7 +1,6 @@
 import cv2 as cv
 import numpy as np
 import os
-from PIL import Image
 import time
 
 
@@ -41,7 +40,7 @@ def get_boxes(processed):
 
 
 def clean_boxes(boxes):
-    return [box for box in boxes if box.height > 5 and box.width > 5]
+    return [box for box in boxes if box.height > 13]
 
 
 def erode(boxes, processed):
@@ -53,7 +52,7 @@ def erode(boxes, processed):
     sorted_ctrs = sorted(ctrs, key=lambda ctr: cv.boundingRect(ctr)[0])
     for i, ctr in enumerate(sorted_ctrs):
         x, y, w, h = cv.boundingRect(ctr)
-        boxes.append(Box(x, y, w, h, (0, 0, 255), 1))
+        boxes.append(Box(x, y, w, h, (0, 255, 0), 2))
     return boxes
 
 
@@ -104,8 +103,10 @@ def remove_inside_boxes(boxes):
 def divide_boxes(mean, boxes):
     new_boxes = []
     boxes_to_remove = []
+    #print(mean*0.7)
     for i, box in enumerate(boxes):
-        n = box.width // (mean * 0.7)
+        n = round(box.width // (mean*0.65))
+        #print(f"{box} - {n}")
         if n >= 2:
             boxes_to_remove.append(box)
             for j in range(int(n)):
@@ -113,7 +114,7 @@ def divide_boxes(mean, boxes):
                 new_x = round(box.x + (new_w * (j)))
                 new_y = box.y
                 new_h = box.height
-                new_box = Box(new_x, new_y, new_w, new_h, (255, 0, 0), 1)
+                new_box = Box(new_x, new_y, new_w, new_h, (255, 0, 0), 2)
                 new_boxes.append(new_box)
     boxes = [box for box in boxes if box not in boxes_to_remove]
     return boxes + new_boxes
@@ -130,8 +131,19 @@ def check_mean_width(boxes):
 def show_boxes(boxes, image):
     for box in boxes:
         cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-    cv.imshow('marked areas', image)
+    cv.imshow('image', image)
     cv.waitKey(0)
+
+
+def crop_boxes(boxes, image):
+    cropped_images = []
+    for box in boxes:
+        crop_image = image[box.y:(box.y + box.height), box.x:(box.x + box.width)].copy()
+        print(f"Width: {box.width} Height: {box.height}")
+        cv.imshow("Cropped", crop_image)
+        cv.waitKey(0)
+        cropped_images.append(crop_image)
+    return cropped_images
 
 
 def img_segmentation(img_path):
@@ -142,15 +154,15 @@ def img_segmentation(img_path):
     boxes = remove_inside_boxes(boxes)
     boxes = check_mean_width(boxes)
     show_boxes(boxes, image)
-    return boxes, image
+    #cropped_images = crop_boxes(boxes, image)
+    #return cropped_images
 
 
-img_path = 'input.tif'
+#img_path = 'input3.tif'
 
-boxes, image = img_segmentation(img_path)
-cropped_images = []
+for folder in os.listdir('datasets/lineImages/f09'):
+    for file in os.listdir(f'datasets/lineImages/f09/{folder}/'):
+        img_segmentation(f'datasets/lineImages/f09/{folder}/{file}')
 
-for box in boxes:
-    crop_image = image[box.y:(box.y + box.height), box.x:(box.x + box.width)].copy()
-    cv.imshow("Cropped", crop_image)
-    cv.waitKey(0)
+#cropped_images = img_segmentation(img_path)
+
