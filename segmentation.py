@@ -85,19 +85,40 @@ def get_dicts(boxes):
     return {box: get_overlapping_boxes(box, boxes) for box in boxes if get_overlapping_boxes(box, boxes)}
 
 
-def inside(box1, box2):
-    if (box1.x < box2.x) and (box1.y < box2.y) and (box1.x + box1.width > box2.x + box2.width) and (box1.y + box1.height > box2.y + box2.height):
-        return True
+def inside_overlap(box1, box2):
+    if (box2.x < box1.x) and (box2.y < box1.y) and (box2.x + box2.width > box1.x + box1.width) and (box2.y + box2.height > box1.y + box1.height):
+        return 'inside'
+    elif (box2.x < box1.x-5) and (box2.y < box1.y-5) or (box2.x + box2.width > box1.x + box1.width+5) and (box2.y + box2.height > box1.y + box1.height+5):
+        return 'overlap'
     else:
         return False
 
 
+def get_new_coordinates(box1, box2):
+    list_x = sorted([box1.x, box1.bottom_right[0], box2.x, box2.bottom_right[0]])
+    list_y = sorted([box1.y, box1.bottom_right[1], box2.y, box2.bottom_right[1]])
+    top_left = (list_x[0], list_y[0])
+    bottom_right = (list_x[-1], list_y[-1])
+    return top_left, bottom_right
+
+
 def remove_inside_boxes(boxes):
+    new_boxes= []
     for box in boxes:
         for box_ in boxes:
-            if inside(box, box_) and box != box_:
+            if inside_overlap(box, box_) == 'inside' and box != box_:
                 boxes.remove(box_)
-    return boxes
+            elif inside_overlap(box, box_) == 'overlap' and box != box_:
+                top_left, bottom_right = get_new_coordinates(box, box_)
+                new_box = Box(top_left[0], top_left[1], bottom_right[0], bottom_right[1], (255, 0, 0), 2)
+                new_boxes.append(new_box)
+                print(new_box)
+                print()
+                #boxes.remove(box)
+                #boxes.remove(box_)
+            else:
+                continue
+    return boxes + new_boxes
 
 
 def divide_boxes(mean, boxes):
