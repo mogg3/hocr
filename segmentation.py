@@ -86,13 +86,20 @@ def get_dicts(boxes):
 
 
 def inside_overlap(box1, box2):
+    # Inside if box1 is inside box2
     if (box2.x < box1.x) and (box2.y < box1.y) and (box2.x + box2.width > box1.x + box1.width) \
             and (box2.y + box2.height > box1.y + box1.height):
         return 'inside'
-    elif (box1.x-18 < box2.x < box1.x) and (box1.y-18 < box2.y < box1.y-18) \
-            or (box1.x + box1.width+18 > box2.x + box2.width > box1.x + box1.width) and \
-            (box1.y + box1.height+18 > box2.y + box2.height > box1.y + box1.height):
-        return 'overlap'
+    # Overlap if box1 overlaps box2
+    elif check_overlap(box1, box2):
+        if (box2.x-18 < box1.x < box2.x) and (box2.y-18 < box1.y < box2.y-18) or \
+                (box2.x + box2.width+18 < box1.x + box1.width < box2.x + box2.width) and \
+                (box2.y + box2.height+18 < box1.y + box1.height < box2.y + box2.height) or \
+                (box2.x + box2.width+18 > box1.x + box1.width > box2.x + box2.width) and \
+                (box2.y + box2.height+18 > box1.y + box1.height > box2.y + box2.height) or \
+                (box2.x + box2.width-18 > box1.x + box1.width > box2.x + box2.width) and \
+                (box2.y + box2.height-18 > box1.y + box1.height > box2.y + box2.height):
+            return 'overlap'
     else:
         return False
 
@@ -115,6 +122,8 @@ def fix_inside_overlapping(boxes, image):
                 top_left, bottom_right = get_new_coordinates(box, box_)
                 new_box = Box(top_left[0], top_left[1], bottom_right[0]-top_left[0], bottom_right[1]-top_left[1], (255, 0, 255), 3)
                 new_boxes.append(new_box)
+                # cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
+                # cv.rectangle(image, (box_.x, box_.y), box_.bottom_right, box_.color, box_.thickness)
                 # cv.rectangle(image, (new_box.x, new_box.y), new_box.bottom_right, new_box.color, new_box.thickness)
                 # cv.imshow('image', image)
                 # cv.waitKey(0)
@@ -125,34 +134,30 @@ def fix_inside_overlapping(boxes, image):
     return boxes + new_boxes
 
 
-def divide_boxes(mean, boxes, image):
-    new_boxes = []
-    boxes_to_remove = []
-    #print(mean*0.7)
-    for i, box in enumerate(boxes):
-        n = round(box.width // mean)
-        #print(f"{box} - {n}")
-        if n >= 2:
-            boxes_to_remove.append(box)
-            for j in range(int(n)):
-                new_w = round((box.width / n))
-                new_x = round(box.x + (new_w * (j)))
-                new_y = box.y
-                new_h = box.height
-                new_box = Box(new_x, new_y, new_w, new_h, (255, 0, 0), 2)
-                #cv.rectangle(image, (new_box.x, new_box.y), new_box.bottom_right, new_box.color, new_box.thickness)
-                #cv.imshow('image', image)
-                #cv.waitKey(0)
-                new_boxes.append(new_box)
-    boxes = [box for box in boxes if box not in boxes_to_remove]
-    return boxes + new_boxes
-
-
-def check_mean_width(boxes, image):
+def divide_boxes(boxes, image):
     box_width = sorted([box.width for box in boxes])
     mean = np.mean(box_width)
     if box_width[-1] >= mean*2.2:
-        boxes = divide_boxes(mean, boxes, image)
+        new_boxes = []
+        boxes_to_remove = []
+        #print(mean*0.7)
+        for i, box in enumerate(boxes):
+            n = round(box.width // mean)
+            #print(f"{box} - {n}")
+            if n >= 2:
+                boxes_to_remove.append(box)
+                for j in range(int(n)):
+                    new_w = round((box.width / n))
+                    new_x = round(box.x + (new_w * (j)))
+                    new_y = box.y
+                    new_h = box.height
+                    new_box = Box(new_x, new_y, new_w, new_h, (255, 0, 0), 2)
+                    cv.rectangle(image, (new_box.x, new_box.y), new_box.bottom_right, new_box.color, new_box.thickness)
+                    cv.imshow('image', image)
+                    cv.waitKey(0)
+                    new_boxes.append(new_box)
+        boxes = [box for box in boxes if box not in boxes_to_remove]
+        return boxes + new_boxes
     return boxes
 
 
@@ -180,17 +185,17 @@ def img_segmentation(img_path):
     boxes = get_boxes(processed)
     boxes = clean_boxes(boxes)
     boxes = fix_inside_overlapping(boxes, image)
-    boxes = check_mean_width(boxes, image)
-    show_boxes(boxes, image)
+    boxes = divide_boxes(boxes, image)
+    #show_boxes(boxes, image)
     #cropped_images = crop_boxes(boxes, image)
     #return cropped_images
 
 
 #img_path = 'input3.tif'
 
-for folder in os.listdir('datasets/lineImages/f09'):
-    for file in os.listdir(f'datasets/lineImages/f09/{folder}/'):
-        img_segmentation(f'datasets/lineImages/f09/{folder}/{file}')
+for folder in os.listdir('datasets/lineImages/c04'):
+    for file in os.listdir(f'datasets/lineImages/c04/{folder}/'):
+        img_segmentation(f'datasets/lineImages/c04/{folder}/{file}')
 
 #cropped_images = img_segmentation(img_path)
 
