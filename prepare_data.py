@@ -55,15 +55,6 @@ def to_ones(vectors):
     return vectors
 
 
-file_path = 'datasets/handwritten_letters/'
-limit = 10
-
-training_dicts = get_dicts(file_path, limit, 'Train')
-validation_dicts = get_dicts(file_path, limit, 'Validation')
-
-training_data = get_data(training_dicts)
-validation_data = get_data(validation_dicts)
-
 # Character(vector (x), character (y))
 
 # Bokstav med minst bilder 4261, J

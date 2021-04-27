@@ -122,9 +122,9 @@ def fix_inside_overlapping(boxes, image):
                 top_left, bottom_right = get_new_coordinates(box, box_)
                 new_box = Box(top_left[0], top_left[1], bottom_right[0]-top_left[0], bottom_right[1]-top_left[1], (255, 0, 255), 3)
                 new_boxes.append(new_box)
-                # cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-                # cv.rectangle(image, (box_.x, box_.y), box_.bottom_right, box_.color, box_.thickness)
-                # cv.rectangle(image, (new_box.x, new_box.y), new_box.bottom_right, new_box.color, new_box.thickness)
+                #cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
+                #cv.rectangle(image, (box_.x, box_.y), box_.bottom_right, box_.color, box_.thickness)
+                #cv.rectangle(image, (new_box.x, new_box.y), new_box.bottom_right, new_box.color, new_box.thickness)
                 # cv.imshow('image', image)
                 # cv.waitKey(0)
                 boxes.remove(box)
@@ -152,9 +152,9 @@ def divide_boxes(boxes, image):
                     new_y = box.y
                     new_h = box.height
                     new_box = Box(new_x, new_y, new_w, new_h, (255, 0, 0), 2)
-                    cv.rectangle(image, (new_box.x, new_box.y), new_box.bottom_right, new_box.color, new_box.thickness)
-                    cv.imshow('image', image)
-                    cv.waitKey(0)
+                    #cv.rectangle(image, (new_box.x, new_box.y), new_box.bottom_right, new_box.color, new_box.thickness)
+                    # cv.imshow('image', image)
+                    # cv.waitKey(0)
                     new_boxes.append(new_box)
         boxes = [box for box in boxes if box not in boxes_to_remove]
         return boxes + new_boxes
@@ -172,9 +172,9 @@ def crop_boxes(boxes, image):
     cropped_images = []
     for box in boxes:
         crop_image = image[box.y:(box.y + box.height), box.x:(box.x + box.width)].copy()
-        print(f"Width: {box.width} Height: {box.height}")
-        cv.imshow("Cropped", crop_image)
-        cv.waitKey(0)
+        # print(f"Width: {box.width} Height: {box.height}")
+        # cv.imshow("Cropped", crop_image)
+        # cv.waitKey(0)
         cropped_images.append(crop_image)
     return cropped_images
 
@@ -187,15 +187,7 @@ def img_segmentation(img_path):
     boxes = fix_inside_overlapping(boxes, image)
     boxes = divide_boxes(boxes, image)
     #show_boxes(boxes, image)
-    #cropped_images = crop_boxes(boxes, image)
-    #return cropped_images
+    cropped_images = crop_boxes(boxes, image)
+    return cropped_images
 
-
-#img_path = 'input3.tif'
-
-for folder in os.listdir('datasets/lineImages/c04'):
-    for file in os.listdir(f'datasets/lineImages/c04/{folder}/'):
-        img_segmentation(f'datasets/lineImages/c04/{folder}/{file}')
-
-#cropped_images = img_segmentation(img_path)
 
