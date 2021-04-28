@@ -1,5 +1,4 @@
-from text_segmentation import img_segmentation
-from image_paste import image_paste
+from text_segmentation import img_segmentation, image_paste
 import cv2 as cv
 
 
