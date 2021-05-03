@@ -36,7 +36,8 @@ def vectorize(matrix):
     return vector
 
 
-def get_data(dicts):
+def get_data(src, limit):
+    dicts = get_dicts(src, limit)
     data = []
     for dict in dicts:
         vector = vectorize(dict['matrix'])
@@ -45,9 +46,9 @@ def get_data(dicts):
     return data
 
 
-dataset_path = 'datasets/handwritten_letters'
-dicts = get_dicts(dataset_path, 10)
-data = get_data(dicts)
+src = 'datasets/handwritten_letters'
+limit = 10
+data = get_data(src, 10)
 
 
 # Character(vector (x), character (y))

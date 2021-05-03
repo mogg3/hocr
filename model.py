@@ -17,7 +17,6 @@ def new_model(model_typ="forest", file_name="model.dat"):
         os.remove(f"model/{file_name}")
     if model_typ.lower() == "forest":
         model = train_forest()
-
     with open(f"model/{file_name}", "wb") as file:
         pickle.dump(model, file)
     return model
@@ -32,12 +31,9 @@ def load_model(file_name="model.dat"):
 def train_forest():
     char_dict = {"char": [], "matrix": []}
     char_set = dict()
-    ignore = ["#", "$", "&", "@"]
     src = r"model/dataset"
     for i in range(1000):
         for folder in os.listdir(src):
-            if folder in ignore:
-                continue
             if folder not in char_set:
                 char_set[folder] = sorted_alphanumeric(os.listdir(src + '/' + folder))
             img = cv2.imread(f"{src}/{folder}/{char_set[folder][i]}")
