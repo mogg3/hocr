@@ -6,9 +6,8 @@ import cv2 as cv
 model = new_model(model_typ="forest")
 
 cropped_images = img_segmentation('input3.tif')
-pasted_images = image_paste(cropped_images)
 
-for image in pasted_images:
+for image in cropped_images:
     print(model.predict([image.flatten()]))
     image = cv.resize(image, (100, 100))
     cv.imshow('image', image)

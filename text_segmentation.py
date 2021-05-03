@@ -158,18 +158,6 @@ def crop_boxes(boxes, image):
     return cropped_images
 
 
-def img_segmentation(img_path):
-    image = cv.imread(img_path)
-    processed = process_img(image)
-    boxes = get_boxes(processed)
-    boxes = clean_boxes(boxes)
-    boxes = fix_inside_overlapping(boxes)
-    boxes = divide_boxes(boxes)
-    # show_boxes(boxes, image)
-    cropped_images = crop_boxes(boxes, image)
-    return cropped_images
-
-
 def image_paste(cropped_images):
     edges_list = []
     for cropped_image in cropped_images:
@@ -205,3 +193,16 @@ def image_paste(cropped_images):
 
         edges_list.append(gray)
     return edges_list
+
+
+def img_segmentation(img_path):
+    image = cv.imread(img_path)
+    processed = process_img(image)
+    boxes = get_boxes(processed)
+    boxes = clean_boxes(boxes)
+    boxes = fix_inside_overlapping(boxes)
+    boxes = divide_boxes(boxes)
+    # show_boxes(boxes, image)
+    cropped_images = crop_boxes(boxes, image)
+    pasted_images = image_paste(cropped_images)
+    return pasted_images
