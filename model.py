@@ -31,7 +31,7 @@ def load_model(file_name="model.dat"):
 def train_forest():
     char_dict = {"char": [], "matrix": []}
     char_set = dict()
-    src = r"model/dataset"
+    src = r"model/dataset/handwritten_letters"
     for i in range(1000):
         for folder in os.listdir(src):
             if folder not in char_set:
