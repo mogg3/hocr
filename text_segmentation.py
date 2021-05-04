@@ -76,25 +76,15 @@ def check_overlap(box1, box2):
         return True
 
 
-def inside_overlap(box1, box2):
+def inside_overlap(box1, box2, image):
     # Inside if box1 is inside box2
-    # cv.rectangle(image, (box1.x, box1.y), box1.bottom_right, box1.color, box1.thickness)
-    # cv.rectangle(image, (box2.x, box2.y), box2.bottom_right, box2.color, box2.thickness)
-    # cv.imshow('image', image)
-    # cv.waitKey(0)
-    if (box2.x < box1.x) and (box2.y < box1.y) and (box2.x + box2.width > box1.x + box1.width) \
-            and (box2.y + box2.height > box1.y + box1.height):
+    if (box2.x <= box1.x) and (box2.y <= box1.y) and (box2.x + box2.width >= box1.x + box1.width) \
+            and (box2.y + box2.height >= box1.y + box1.height):
         return 'inside'
     # Overlap if box1 overlaps box2
     elif check_overlap(box2, box1):
-        n = 18
-        if (box2.x-n < box1.x < box2.x) and (box2.y-n < box1.y < box2.y-n) or \
-                (box2.x + box2.width+n < box1.x + box1.width < box2.x + box2.width) and \
-                (box2.y + box2.height+n < box1.y + box1.height < box2.y + box2.height) or \
-                (box2.x + box2.width+n > box1.x + box1.width > box2.x + box2.width) and \
-                (box2.y + box2.height+n > box1.y + box1.height > box2.y + box2.height) or \
-                (box2.x + box2.width-n > box1.x + box1.width > box2.x + box2.width) and \
-                (box2.y + box2.height-n > box1.y + box1.height > box2.y + box2.height):
+        n = 15
+        if (box2.x-n <= box1.x <= box2.x) or (box2.x + box2.width <= box1.x + box1.width <= box2.x + box2.width+n):
             return 'overlap'
     else:
         return False
@@ -108,13 +98,19 @@ def get_new_coordinates(box1, box2):
     return top_left, bottom_right
 
 
-def fix_inside_overlapping(boxes):
+def fix_inside_overlapping(boxes, image):
     new_boxes = []
     for box in boxes:
         for box_ in boxes:
-            if inside_overlap(box, box_) == 'inside' and box != box_:
+            if inside_overlap(box, box_, image) == 'inside' and box != box_:
+                print('inside')
                 boxes.remove(box_)
-            elif inside_overlap(box, box_) == 'overlap' and box != box_:
+            elif inside_overlap(box, box_, image) == 'overlap' and box != box_:
+                print('overlaping')
+                cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
+                cv.rectangle(image, (box_.x, box_.y), box_.bottom_right, box_.color, box_.thickness)
+                cv.imshow('image', image)
+                cv.waitKey(0)
                 top_left, bottom_right = get_new_coordinates(box, box_)
                 new_box = Box(top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1],
                               (255, 0, 255), 3)
@@ -168,7 +164,7 @@ def img_segmentation(img_path):
     processed = process_img(image)
     boxes = get_boxes(processed)
     boxes = clean_boxes(boxes)
-    boxes = fix_inside_overlapping(boxes)
+    boxes = fix_inside_overlapping(boxes, image)
     boxes = divide_boxes(boxes)
     show_boxes(boxes, image)
     cropped_images = crop_boxes(boxes, image)
@@ -178,14 +174,14 @@ def img_segmentation(img_path):
 # img_path = 'input3.tif'
 # img_segmentation(img_path)
 
-img_path = 'datasets/lineImages/a05/a05-275/a05-275z-08.tif'
-img_segmentation(img_path)
+# img_path = 'datasets/lineImages/a05/a05-297/a05-297z-04.tif'
+# img_segmentation(img_path)
 
 
-# for folder in os.listdir('datasets/lineImages/a05'):
-#     for file in os.listdir(f'datasets/lineImages/a05/{folder}/'):
-#         print(f'Segmentation of file {folder}/{file}')
-#         img_segmentation(f'datasets/lineImages/a05/{folder}/{file}')
+for folder in os.listdir('datasets/lineImages/a05'):
+    for file in os.listdir(f'datasets/lineImages/a05/{folder}/'):
+        print(f'Segmentation of file {folder}/{file}')
+        img_segmentation(f'datasets/lineImages/a05/{folder}/{file}')
 
 
 def image_paste(cropped_images):
