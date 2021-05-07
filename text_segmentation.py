@@ -159,31 +159,6 @@ def crop_boxes(boxes, image):
     return cropped_images
 
 
-def img_segmentation(img_path):
-    image = cv.imread(img_path)
-    processed = process_img(image)
-    boxes = get_boxes(processed)
-    boxes = clean_boxes(boxes)
-    boxes = fix_inside_overlapping(boxes, image)
-    boxes = divide_boxes(boxes)
-    show_boxes(boxes, image)
-    cropped_images = crop_boxes(boxes, image)
-    return cropped_images
-
-
-# img_path = 'input3.tif'
-# img_segmentation(img_path)
-
-# img_path = 'datasets/lineImages/a05/a05-297/a05-297z-04.tif'
-# img_segmentation(img_path)
-
-
-for folder in os.listdir('datasets/lineImages/a05'):
-    for file in os.listdir(f'datasets/lineImages/a05/{folder}/'):
-        print(f'Segmentation of file {folder}/{file}')
-        img_segmentation(f'datasets/lineImages/a05/{folder}/{file}')
-
-
 def image_paste(cropped_images):
     edges_list = []
     for cropped_image in cropped_images:
@@ -219,3 +194,16 @@ def image_paste(cropped_images):
 
         edges_list.append(gray)
     return edges_list
+
+
+def img_segmentation(img_path):
+    image = cv.imread(img_path)
+    processed = process_img(image)
+    boxes = get_boxes(processed)
+    boxes = clean_boxes(boxes)
+    boxes = fix_inside_overlapping(boxes)
+    boxes = divide_boxes(boxes)
+    # show_boxes(boxes, image)
+    cropped_images = crop_boxes(boxes, image)
+    pasted_images = image_paste(cropped_images)
+    return pasted_images
