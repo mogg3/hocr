@@ -76,20 +76,15 @@ def check_overlap(box1, box2):
         return True
 
 
-def inside_overlap(box1, box2):
+def inside_overlap(box1, box2, image):
     # Inside if box1 is inside box2
-    if (box2.x < box1.x) and (box2.y < box1.y) and (box2.x + box2.width > box1.x + box1.width) \
-            and (box2.y + box2.height > box1.y + box1.height):
+    if (box2.x <= box1.x) and (box2.y <= box1.y) and (box2.x + box2.width >= box1.x + box1.width) \
+            and (box2.y + box2.height >= box1.y + box1.height):
         return 'inside'
     # Overlap if box1 overlaps box2
-    elif check_overlap(box1, box2):
-        if (box2.x - 18 < box1.x < box2.x) and (box2.y - 18 < box1.y < box2.y - 18) or \
-                (box2.x + box2.width + 18 < box1.x + box1.width < box2.x + box2.width) and \
-                (box2.y + box2.height + 18 < box1.y + box1.height < box2.y + box2.height) or \
-                (box2.x + box2.width + 18 > box1.x + box1.width > box2.x + box2.width) and \
-                (box2.y + box2.height + 18 > box1.y + box1.height > box2.y + box2.height) or \
-                (box2.x + box2.width - 18 > box1.x + box1.width > box2.x + box2.width) and \
-                (box2.y + box2.height - 18 > box1.y + box1.height > box2.y + box2.height):
+    elif check_overlap(box2, box1):
+        n = 15
+        if (box2.x-n <= box1.x <= box2.x) or (box2.x + box2.width <= box1.x + box1.width <= box2.x + box2.width+n):
             return 'overlap'
     else:
         return False
@@ -103,13 +98,19 @@ def get_new_coordinates(box1, box2):
     return top_left, bottom_right
 
 
-def fix_inside_overlapping(boxes):
+def fix_inside_overlapping(boxes, image):
     new_boxes = []
     for box in boxes:
         for box_ in boxes:
-            if inside_overlap(box, box_) == 'inside' and box != box_:
+            if inside_overlap(box, box_, image) == 'inside' and box != box_:
+                print('inside')
                 boxes.remove(box_)
-            elif inside_overlap(box, box_) == 'overlap' and box != box_:
+            elif inside_overlap(box, box_, image) == 'overlap' and box != box_:
+                print('overlaping')
+                cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
+                cv.rectangle(image, (box_.x, box_.y), box_.bottom_right, box_.color, box_.thickness)
+                cv.imshow('image', image)
+                cv.waitKey(0)
                 top_left, bottom_right = get_new_coordinates(box, box_)
                 new_box = Box(top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1],
                               (255, 0, 255), 3)
