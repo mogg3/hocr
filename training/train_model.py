@@ -7,8 +7,19 @@ import re
 from tensorflow import keras
 from tensorflow.keras.layers import *
 import time
-import pickle
 import category_encoders as ce
+
+
+def new_model(seed, img_am, epochs):
+    if 'model' in os.listdir("training"):
+        os.remove("training/model")
+    model = train_cnn(seed, img_am, epochs)
+    model.save(f'model/model')
+    return model
+
+
+def load_model(path):
+    return keras.models.load_model(path)
 
 
 def sorted_alphanumeric(data):
@@ -50,9 +61,9 @@ def get_data(src, img_am):
 
     split = int(round(0.9 * len(X)))
 
-    train_X = X[:split]
+    train_X = X[:split]/255
     train_y = y[:split]
-    test_X = X[split:]
+    test_X = X[split:]/255
     test_y = y[split:]
 
     train_X = train_X.astype('float32')
@@ -61,8 +72,8 @@ def get_data(src, img_am):
     return train_X, train_y, test_X, test_y
 
 
-def train_cnn(seed, img_am, epochs):
-    train_X, train_y, test_X, test_y = get_data(r"model/dataset/handwritten_letters", img_am)
+def train_model(seed, img_am, epochs):
+    train_X, train_y, test_X, test_y = get_data(r"training/dataset/handwritten_letters", img_am)
     tf.random.set_seed(seed)
 
     model = tf.keras.Sequential()
@@ -82,6 +93,7 @@ def train_cnn(seed, img_am, epochs):
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
+
     print('Fitting...')
     model.fit(train_X, train_y, epochs=epochs)
     print('Done fitting...')

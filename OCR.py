@@ -1,53 +1,44 @@
 from text_segmentation import img_segmentation, image_paste
 import cv2 as cv
 import os
-from CNN_Model import train_cnn
+from training.train_model import train_model, load_model, new_model, load_img, get_data, sorted_alphanumeric
 import pickle
 from tensorflow import keras
+import tensorflow as tf
+import numpy as np
 
 
-def new_model(model_typ, file_name, seed, img_am, epochs):
-    model = None
-    if file_name in os.listdir("model"):
-        os.remove(f"model/{file_name}")
-    if model_typ.lower() == "neural":
-        model = train_cnn(seed, img_am, epochs)
-        model.save(f'model/{file_name}')
-    if model_typ.lower() == "forest":
-        model = train_forest()
-        with open(f"model/{file_name}", "wb") as file:
-            pickle.dump(model, file)
-    return model
-
-
-def load_model(file_name):
-    with open(f"model/{file_name}", "rb") as file:
-        model = pickle.load(file)
-    return model
-
-
-def random_forest_ocr():
-    model = load_model(file_name)
-    # model = new_model(model_typ="forest")
-
-    cropped_images = img_segmentation('input.tif')
-
-    for image in cropped_images:
-        print(model.predict([image.flatten()]))
-        image = cv.resize(image, (100, 100))
-        cv.imshow('image', image)
-        cv.waitKey(0)
-
-
-def neural_network_ocr():
+def ocr():
     # New model
-    seed = 8
-    img_am = 1000
-    epochs = 20
-    new_model('neural', 'nn_model', seed, img_am, epochs)
+    # new_model('neural', 'nn_model', 23, 1000, 25)
 
     # Load model
-    # model = keras.models.load_model('model/nn_model')
+    model = load_model('training/model')
+    images = img_segmentation('input.tif')
+
+    char_dict = {"char": [], "matrix": []}
+    char_set = dict()
+    src = r"data/training_data"
+    for i in range(35):
+        for folder in os.listdir(src):
+            char_dict["char"].append(folder)
+            if folder not in char_set:
+                char_set[folder] = sorted_alphanumeric(os.listdir(src + '/' + folder))
+
+    char_dict = char_dict['char'][:35]
+
+    for image in images:
+        cv.imwrite("tmp.jpg", image)
+        image = tf.keras.preprocessing.image.load_img('tmp.jpg', grayscale=True, color_mode="grayscale")
+        input_arr = keras.preprocessing.image.img_to_array(image)
+        input_arr = np.array(input_arr)
+        input_arr = np.reshape(input_arr, (1, 32, 32, 1))
+        pred = list(model.predict(input_arr)[0])
+        print(char_dict[pred.index(max(pred))])
+        image = cv.imread('tmp.jpg')
+        cv.imshow('image', image)
+        cv.waitKey(0)
+        os.remove('tmp.jpg')
 
 
-neural_network_ocr()
+ocr()
