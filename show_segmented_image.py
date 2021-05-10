@@ -3,13 +3,7 @@ import cv2 as cv
 
 
 def get_small_images(img_path):
-    cv.imshow('Origin', cv.imread(img_path))
-    cv.waitKey(0)
-
-    cropped_images = img_segmentation(img_path)
-    pasted_images = image_paste(cropped_images)
-
-    return pasted_images
+    return img_segmentation(img_path)
 
 
 def show_images(images):
@@ -19,6 +13,5 @@ def show_images(images):
         cv.waitKey(0)
 
 
-path = 'input3.tif'
-small_images = get_small_images(path)
-show_images(small_images)
+images = get_small_images('input.tif')
+show_images(images)

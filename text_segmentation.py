@@ -25,8 +25,6 @@ class Box:
 def process_img(image):
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     _, processed = cv.threshold(gray, 127, 255, cv.THRESH_BINARY_INV)
-    cv.imshow('image', processed)
-    cv.waitKey(0)
     return processed
 
 
@@ -109,8 +107,6 @@ def fix_inside_overlapping(boxes, image):
                 print('overlaping')
                 cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
                 cv.rectangle(image, (box_.x, box_.y), box_.bottom_right, box_.color, box_.thickness)
-                cv.imshow('image', image)
-                cv.waitKey(0)
                 top_left, bottom_right = get_new_coordinates(box, box_)
                 new_box = Box(top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1],
                               (255, 0, 255), 3)
@@ -190,7 +186,8 @@ def image_paste(cropped_images):
                 cropped_image
 
         gray = cv.cvtColor(blank_image, cv.COLOR_BGR2GRAY)
-        _, gray = cv.threshold(gray, 127, 255, cv.THRESH_BINARY_INV)
+        gray = cv.bitwise_not(gray)
+        # _, gray = cv.threshold(gray, 127, 255, cv.THRESH_BINARY_INV)
 
         edges_list.append(gray)
     return edges_list
@@ -201,9 +198,10 @@ def img_segmentation(img_path):
     processed = process_img(image)
     boxes = get_boxes(processed)
     boxes = clean_boxes(boxes)
-    boxes = fix_inside_overlapping(boxes)
+    boxes = fix_inside_overlapping(boxes, image)
     boxes = divide_boxes(boxes)
-    # show_boxes(boxes, image)
+    show_boxes(boxes, cv.imread(img_path))
     cropped_images = crop_boxes(boxes, image)
+
     pasted_images = image_paste(cropped_images)
     return pasted_images
