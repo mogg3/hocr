@@ -80,13 +80,13 @@ def check_overlap(box1, box2):
 
 def inside_overlap(box1, box2, image):
     # Inside if box1 is inside box2
-    if (box2.left <= box1.left) and (box2.top <= box1.top) and (box2.right >= box2.right) \
-            and (box2.bottom >= box1.bottom):
+    if (box2.x <= box1.x) and (box2.y <= box1.y) and (box2.x + box2.width >= box1.x + box1.width) \
+            and (box2.y + box2.height >= box1.y + box1.height):
         return 'inside'
     # Overlap if box1 overlaps box2
     elif check_overlap(box2, box1):
         n = 15
-        if (box2.left - n <= box1.left <= box2.left) or (box2.right <= box1.right <= box2.right + n):
+        if (box2.x-n <= box1.x <= box2.x) or (box2.x + box2.width <= box1.x + box1.width <= box2.x + box2.width+n):
             return 'overlap'
     else:
         return False
@@ -102,38 +102,37 @@ def get_new_coordinates(box1, box2):
 
 def fix_inside_overlapping(boxes, image):
     new_boxes = []
-    overlapping_boxes = []
+    ignore = []
     for box in boxes:
         for other_box in boxes:
             if inside_overlap(box, other_box, image) == 'inside' and box != other_box:
-                # print('inside')
-                continue
+                print('inside')
+                boxes.remove(box)
             elif inside_overlap(box, other_box, image) == 'overlap' and box != other_box:
-                # print('overlaping')
-                # cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-                # cv.rectangle(image, (other_box.x, other_box.y), other_box.bottom_right, other_box.color, other_box.thickness)
+                print('overlaping')
                 top_left, bottom_right = get_new_coordinates(box, other_box)
                 new_box = Box(top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1],
                               (255, 0, 255), 2)
                 new_boxes.append(new_box)
-                overlapping_boxes.append(box)
-                overlapping_boxes.append(other_box)
+                ignore.append(box)
+                ignore.append(other_box)
             else:
                 continue
 
-    return new_boxes + [box for box in boxes if box not in overlapping_boxes]
+    return new_boxes + [box for box in boxes if box not in ignore]
 
 
-def divide_boxes(boxes):
+def divide_boxes(boxes, mean_scale):
     box_width = sorted([box.width for box in boxes])
-    mean = np.mean(box_width)
+    mean = float(np.mean(box_width))
     # TODO's
     # Exprementera med floor eller round division
+    # Minska standarden man jämför boxarna med
     if box_width[-1] >= mean * 2.2:
         new_boxes = []
         boxes_to_remove = []
         for i, box in enumerate(boxes):
-            n = round(box.width / mean)
+            n = round(box.width / mean * mean_scale)
             if n >= 2:
                 boxes_to_remove.append(box)
                 for j in range(int(n)):
@@ -148,11 +147,18 @@ def divide_boxes(boxes):
     return boxes
 
 
-def show_boxes(boxes, image):
+def show_boxes(boxes, original_boxes, image):
+    image_origin = image.copy()
+    for box in original_boxes:
+        cv.rectangle(image_origin, (box.x, box.y), box.bottom_right, box.color, box.thickness)
+    image_origin = cv.resize(image_origin, (image_origin.shape[1] * 3, image_origin.shape[0] * 2))
+    cv.imshow('origin', image_origin)
+
+    image_cleaned = image.copy()
     for box in boxes:
-        cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-    image = cv.resize(image, (image.shape[1] * 3, image.shape[0] * 2))
-    cv.imshow('image', image)
+        cv.rectangle(image_cleaned, (box.x, box.y), box.bottom_right, box.color, box.thickness)
+    image_cleaned = cv.resize(image_cleaned, (image_cleaned.shape[1] * 3, image_cleaned.shape[0] * 2))
+    cv.imshow('cleaned', image_cleaned)
     cv.waitKey(0)
 
 
@@ -196,26 +202,29 @@ def image_paste(cropped_images):
 
         gray = cv.cvtColor(blank_image, cv.COLOR_BGR2GRAY)
         gray = cv.bitwise_not(gray)
-        # _, gray = cv.threshold(gray, 127, 255, cv.THRESH_BINARY_INV)
 
         edges_list.append(gray)
     return edges_list
 
 
-def img_segmentation(img_path):
+def img_segmentation(img_path, mean_scale):
     image = cv.imread(img_path)
     processed = process_img(image)
-    boxes = get_boxes(processed)
-    boxes = clean_boxes(boxes)
+    original_boxes = get_boxes(processed)
+    boxes = original_boxes.copy()
     boxes = fix_inside_overlapping(boxes, image)
-    boxes = divide_boxes(boxes)
-    show_boxes(boxes, cv.imread(img_path))
+    boxes = divide_boxes(boxes, mean_scale)
+    boxes = clean_boxes(boxes)
+    show_boxes(boxes, original_boxes, cv.imread(img_path))
     # cropped_images = crop_boxes(boxes, image)
     # pasted_images = image_paste(cropped_images)
     # return pasted_images
 
+# input mean_scale = 0.8
+# input3 mean_scale = 1
 
-img_segmentation('input.tif')
+
+img_segmentation('input3.tif', 1)
 
 root_folder = 'a02'
 for folder in os.listdir(f'data/lineimages/{root_folder}'):
