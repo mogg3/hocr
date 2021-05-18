@@ -10,11 +10,9 @@ import time
 import category_encoders as ce
 
 
-def new_model(seed, img_am, epochs):
-    if 'model' in os.listdir("training"):
-        os.remove("training/model")
-    model = train_cnn(seed, img_am, epochs)
-    model.save(f'model/model')
+def new_model(model_name, seed, img_am, epochs):
+    model = train_model(seed, img_am, epochs)
+    model.save(f'training/models/{model_name}')
     return model
 
 
@@ -39,13 +37,20 @@ def get_dict(src, img_am):
     start = time.time()
     char_dict = {"char": [], "matrix": []}
     char_set = dict()
+    ignore = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.DS_Store']
+    counter = int(img_am * 0.7)
     for i in range(img_am):
+        # if i == 200:
+        #     ignore = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.DS_Store']
         for folder in os.listdir(src):
+            if folder in ignore:
+                continue
             char_dict["char"].append(folder)
             if folder not in char_set:
                 char_set[folder] = sorted_alphanumeric(os.listdir(src + '/' + folder))
-            img = load_img(f"{src}/{folder}/{char_set[folder][i]}")
+            img = load_img(f"{src}/{folder}/{char_set[folder][counter]}")
             char_dict["matrix"].append(img)
+        counter -= 1
     stop = time.time()
     print(stop-start, 'seconds')
     return char_dict
@@ -53,7 +58,7 @@ def get_dict(src, img_am):
 
 def get_data(src, img_am):
     char_dict = get_dict(src, img_am)
-    X = np.array(char_dict['matrix'])
+    X = np.array(char_dict['matrix'])/255
     le = ce.OneHotEncoder(return_df=False, handle_unknown="ignore")
     y = np.array(char_dict['char'])
 
@@ -61,9 +66,9 @@ def get_data(src, img_am):
 
     split = int(round(0.9 * len(X)))
 
-    train_X = X[:split]/255
+    train_X = X[:split]
     train_y = y[:split]
-    test_X = X[split:]/255
+    test_X = X[split:]
     test_y = y[split:]
 
     train_X = train_X.astype('float32')
@@ -73,7 +78,7 @@ def get_data(src, img_am):
 
 
 def train_model(seed, img_am, epochs):
-    train_X, train_y, test_X, test_y = get_data(r"training/dataset/handwritten_letters", img_am)
+    train_X, train_y, test_X, test_y = get_data(r"data/training_data", img_am)
     tf.random.set_seed(seed)
 
     model = tf.keras.Sequential()
@@ -88,7 +93,7 @@ def train_model(seed, img_am, epochs):
 
     model.add(Flatten())
     model.add(Dense(128, activation='relu'))
-    model.add(Dense(35, activation='softmax'))
+    model.add(Dense(26, activation='softmax'))
 
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
@@ -97,5 +102,7 @@ def train_model(seed, img_am, epochs):
     print('Fitting...')
     model.fit(train_X, train_y, epochs=epochs)
     print('Done fitting...')
+    results = model.evaluate(test_X, test_y)
+    print(results)
 
     return model
