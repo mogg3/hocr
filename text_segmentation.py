@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy as np
 import os
 import time
+import copy
 
 
 class Box:
@@ -39,7 +40,7 @@ def get_boxes(processed):
     for i, ctr in enumerate(sorted_ctrs):
         x, y, w, h = cv.boundingRect(ctr)
         boxes.append(Box(x, y, w, h, (0, 0, 255), 1))
-    boxes = check_erode(boxes, processed)
+    # boxes = check_erode(boxes, processed)
     return boxes
 
 
@@ -61,11 +62,13 @@ def erode(boxes, processed):
 
 
 def check_erode(boxes, processed):
+    box_width = sorted([box.width for box in boxes])
+    mean = np.mean(box_width)
     counter = 0
     for box in boxes:
-        if box.width > 80:
+        if box.width > mean * 1.5:
             counter += 1
-    if counter >= 3:
+    if counter >= 6:
         boxes = erode(boxes, processed)
     return boxes
 
@@ -80,13 +83,13 @@ def check_overlap(box1, box2):
 
 def inside_overlap(box1, box2, image):
     # Inside if box1 is inside box2
-    if (box2.x <= box1.x) and (box2.y <= box1.y) and (box2.x + box2.width >= box1.x + box1.width) \
-            and (box2.y + box2.height >= box1.y + box1.height):
+    if (box2.left <= box1.left) and (box2.top <= box1.top) and (box2.right >= box1.right) \
+            and (box2.bottom >= box1.bottom):
         return 'inside'
     # Overlap if box1 overlaps box2
     elif check_overlap(box2, box1):
         n = 15
-        if (box2.x-n <= box1.x <= box2.x) or (box2.x + box2.width <= box1.x + box1.width <= box2.x + box2.width+n):
+        if (box2.left - n <= box1.left <= box2.left) or (box2.right <= box1.right <= box2.right + n):
             return 'overlap'
     else:
         return False
@@ -100,39 +103,51 @@ def get_new_coordinates(box1, box2):
     return top_left, bottom_right
 
 
-def fix_inside_overlapping(boxes, image):
+def overlap_fix(boxes, image):
     new_boxes = []
     ignore = []
+    overlapping = False
     for box in boxes:
         for other_box in boxes:
-            if inside_overlap(box, other_box, image) == 'inside' and box != other_box:
-                print('inside')
-                boxes.remove(box)
-            elif inside_overlap(box, other_box, image) == 'overlap' and box != other_box:
-                print('overlaping')
+            if inside_overlap(box, other_box, image) == 'inside' and box != other_box and box not in ignore:
+                ignore.append(box)
+                overlapping = True
+            elif inside_overlap(box, other_box, image) == 'overlap' and box != other_box and box not in ignore:
                 top_left, bottom_right = get_new_coordinates(box, other_box)
                 new_box = Box(top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1],
-                              (255, 0, 255), 2)
+                              (255, 0, 255), 1)
                 new_boxes.append(new_box)
                 ignore.append(box)
                 ignore.append(other_box)
+                overlapping = True
             else:
                 continue
+    new_list = new_boxes + [box for box in boxes if box not in ignore]
+    sorted_list = sorted(new_list, key=lambda box: box.x)
+    return overlapping, sorted_list
 
-    return new_boxes + [box for box in boxes if box not in ignore]
+
+def fix_inside_overlapping(boxes, image):
+    done = False
+    while not done:
+        overlapping, boxes = overlap_fix(boxes, image)
+        if not overlapping:
+            done = True
+    return boxes
 
 
 def divide_boxes(boxes, mean_scale):
     box_width = sorted([box.width for box in boxes])
-    mean = float(np.mean(box_width))
-    # TODO's
-    # Exprementera med floor eller round division
-    # Minska standarden man jämför boxarna med
-    if box_width[-1] >= mean * 2.2:
+    box_height = sorted([box.height for box in boxes])
+    mean_width = float(np.mean(box_width))
+    mean_height = float(np.mean(box_height))
+    mean_rectangle = Box(20, 20, round(mean_width), round(mean_height), (0, 0, 0), 1)
+    # boxes.append(mean_rectangle)
+    if box_width[-1] >= mean_width * 2.2:
         new_boxes = []
         boxes_to_remove = []
         for i, box in enumerate(boxes):
-            n = round(box.width / mean * mean_scale)
+            n = round(box.width // mean_width * mean_scale)
             if n >= 2:
                 boxes_to_remove.append(box)
                 for j in range(int(n)):
@@ -143,7 +158,9 @@ def divide_boxes(boxes, mean_scale):
                     new_box = Box(new_x, new_y, new_w, new_h, (255, 0, 0), 2)
                     new_boxes.append(new_box)
         boxes = [box for box in boxes if box not in boxes_to_remove]
-        return boxes + new_boxes
+        new_list = boxes + new_boxes
+        sorted_list = sorted(new_list, key=lambda box: box.x)
+        return sorted_list
     return boxes
 
 
@@ -211,23 +228,17 @@ def img_segmentation(img_path, mean_scale):
     image = cv.imread(img_path)
     processed = process_img(image)
     original_boxes = get_boxes(processed)
-    boxes = original_boxes.copy()
-    boxes = fix_inside_overlapping(boxes, image)
+    boxes = fix_inside_overlapping(original_boxes, image)
     boxes = divide_boxes(boxes, mean_scale)
     boxes = clean_boxes(boxes)
     show_boxes(boxes, original_boxes, cv.imread(img_path))
-    # cropped_images = crop_boxes(boxes, image)
-    # pasted_images = image_paste(cropped_images)
-    # return pasted_images
-
-# input mean_scale = 0.8
-# input3 mean_scale = 1
+    cropped_images = crop_boxes(boxes, image)
+    pasted_images = image_paste(cropped_images)
+    return pasted_images
 
 
-img_segmentation('input3.tif', 1)
-
-root_folder = 'a02'
-for folder in os.listdir(f'data/lineimages/{root_folder}'):
-    for file in os.listdir(f'data/lineimages/{root_folder}/{folder}'):
-        # img_segmentation(f'data/lineimages/{root_folder}/{folder}/{file}')
-        pass
+# TODO's
+# Exprementera med floor eller round division
+# Minska standarden man jämför boxarna med
+# Slå ihop lådor som ligger ovanför varandra?
+# Träna även modellen på stora bokstäver, nu tränas den bara på små.

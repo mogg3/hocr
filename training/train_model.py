@@ -10,11 +10,9 @@ import time
 import category_encoders as ce
 
 
-def new_model(seed, img_am, epochs):
-    # if 'model' in os.listdir("training"):
-    #     os.remove("training/model")
+def new_model(model_name, seed, img_am, epochs):
     model = train_model(seed, img_am, epochs)
-    model.save(f'training/no_digits_model')
+    model.save(f'training/models/{model_name}')
     return model
 
 
@@ -39,16 +37,20 @@ def get_dict(src, img_am):
     start = time.time()
     char_dict = {"char": [], "matrix": []}
     char_set = dict()
-    ignore = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.DS_Store']
+    ignore = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.DS_Store']
+    counter = int(img_am * 0.7)
     for i in range(img_am):
+        # if i == 200:
+        #     ignore = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.DS_Store']
         for folder in os.listdir(src):
             if folder in ignore:
                 continue
             char_dict["char"].append(folder)
             if folder not in char_set:
                 char_set[folder] = sorted_alphanumeric(os.listdir(src + '/' + folder))
-            img = load_img(f"{src}/{folder}/{char_set[folder][i]}")
+            img = load_img(f"{src}/{folder}/{char_set[folder][counter]}")
             char_dict["matrix"].append(img)
+        counter -= 1
     stop = time.time()
     print(stop-start, 'seconds')
     return char_dict

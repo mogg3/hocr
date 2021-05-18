@@ -37,15 +37,13 @@ def get_chars_digits():
     return char_dict['char'][:35]
 
 
-def ocr():
-    # model = new_model(23, 1000, 25)
-    no_digits_model = load_model('training/no_digits_model')
-    model = load_model('training/model')
+def ocr(img_src):
+    model = load_model('training/models/no_digits_model')
 
-    images = img_segmentation('input.tif')
-    chars_digits = get_chars_digits()
+    images = img_segmentation(img_src, 0.7)
     chars = get_chars()
-
+    print(len(images))
+    result_string = ""
     for image in images:
         cv.imwrite("tmp.jpg", image)
         image = tf.keras.preprocessing.image.load_img('tmp.jpg', grayscale=True, color_mode="grayscale")
@@ -54,14 +52,16 @@ def ocr():
         input_arr = np.reshape(input_arr, (1, 32, 32, 1))
 
         pred = list(model.predict(input_arr)[0])
-        print('With digits prediction: ', chars_digits[pred.index(max(pred))])
+        # print('No digits prediction: ', chars[pred.index(max(pred))])
 
-        no_digits_pred = list(no_digits_model.predict(input_arr)[0])
-        print('No digits prediction: ', chars[no_digits_pred.index(max(no_digits_pred))])
-
-        image = cv.imread('tmp.jpg')
-        image = cv.resize(image, (100, 100))
+        # image = cv.imread('tmp.jpg')
+        # image = cv.resize(image, (100, 100))
         os.remove('tmp.jpg')
-        cv.imshow('image', image)
-        cv.waitKey(0)
-        print('-'*10)
+        # cv.imshow('image', image)
+        # cv.waitKey(0)
+        # print('-'*10)
+        result_string += chars[pred.index(max(pred))]
+    print(result_string)
+
+
+ocr('small_letters1.png')
