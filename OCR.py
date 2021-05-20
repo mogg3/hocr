@@ -15,9 +15,7 @@ def reverse_one_hot(pred):
 
 
 def ocr(img_src):
-    model = load_model('split_AEH_less_QX_700big_1300small_all_separated_model')
-    # model = new_model('split_AEH_less_QX_700big_1300small_all_separated_model', 23, 2000, 25)
-
+    # model = load_model('split_AEH_less_QX_700big_1300small_all_separated_model')
     input_images = img_segmentation(img_src)
     result_string = ""
     for image in input_images:
@@ -33,5 +31,8 @@ def ocr(img_src):
     print(result_string)
 
 
-ocr('test_images/hej_jag_heter_marcus.png')
+for s in range(4, 9):
+    model = new_model(f'split_AEH+{s}_less_QX_700big_1300small_all_separated_model', 23, 2000, 25, s)
+
+
 

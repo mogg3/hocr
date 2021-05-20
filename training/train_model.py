@@ -11,8 +11,8 @@ import category_encoders as ce
 import pickle
 
 
-def new_model(model_name, seed, img_am, epochs):
-    model, chars = train_model(seed, img_am, epochs)
+def new_model(model_name, seed, img_am, epochs, s):
+    model, chars = train_model(seed, img_am, epochs, s)
     model.save(f'training/models/{model_name}')
     return model, chars
 
@@ -54,9 +54,9 @@ def big_small_split(folder_source):
     return {'small': small, 'big': big}
 
 
-def get_dict(src, img_am):
-    # split = ['A', 'B', 'E', 'F', 'G', 'H', 'Q', 'R']
-    split = ['A', 'E', 'H']
+def get_dict(src, img_am, s):
+    splits = ['A', 'H', 'E', 'F', 'G', 'B', 'Q', 'R']
+    split = splits[:s]
 
     start = time.time()
     char_dict = {"char": [], "matrix": []}
@@ -98,8 +98,8 @@ def get_dict(src, img_am):
     return char_dict
 
 
-def get_data(src, img_am):
-    char_dict = get_dict(src, img_am)
+def get_data(src, img_am, s):
+    char_dict = get_dict(src, img_am, s)
     X = np.array(char_dict['matrix'])/255
     le = ce.OneHotEncoder(return_df=False, handle_unknown="ignore", use_cat_names = True)
     y = np.array(char_dict['char'])
@@ -120,9 +120,9 @@ def get_data(src, img_am):
     return train_X, train_y, test_X, test_y
 
 
-def train_model(seed, img_am, epochs):
+def train_model(seed, img_am, epochs, s):
 
-    train_X, train_y, test_X, test_y = get_data(r"../data/training_data", img_am)
+    train_X, train_y, test_X, test_y = get_data(r"../data/training_data", img_am, s)
     tf.random.set_seed(seed)
 
     model = tf.keras.Sequential()
