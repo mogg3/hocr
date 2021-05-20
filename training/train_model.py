@@ -121,7 +121,8 @@ def get_data(src, img_am):
 
 
 def train_model(seed, img_am, epochs):
-    train_X, train_y, test_X, test_y, feature_names = get_data(r"data/training_data", img_am)
+
+    train_X, train_y, test_X, test_y = get_data(r"../data/training_data", img_am)
     tf.random.set_seed(seed)
 
     model = tf.keras.Sequential()

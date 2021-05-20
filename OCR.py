@@ -18,7 +18,7 @@ def ocr(img_src):
     model = load_model('split_AEH_less_QX_700big_1300small_all_separated_model')
     # model = new_model('split_AEH_less_QX_700big_1300small_all_separated_model', 23, 2000, 25)
 
-    input_images = img_segmentation(img_src, 0.7)
+    input_images = img_segmentation(img_src)
     result_string = ""
     for image in input_images:
         if image == ' ':
