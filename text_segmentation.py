@@ -118,6 +118,7 @@ def get_new_coordinates(box1, box2):
     return top_left, bottom_right
 
 
+
 def overlap_fix(boxes):
     new_boxes = []
     ignore = []
@@ -204,18 +205,6 @@ def check_boxes_to_divide(boxes):
     return boxes
 
 
-def add_whitespaces(boxes):
-    mean = get_mean(boxes)
-    boxes_with_spaces = boxes.copy()
-    counter = 0
-    for i in range(len(boxes))[:-1]:
-        distance = boxes[i+1].left - boxes[i].right
-        if distance > mean*0.75:
-            boxes_with_spaces.insert(i+1+counter, ' ')
-            counter += 1
-    return boxes_with_spaces
-
-
 def show_boxes(boxes, original_boxes, image):
     image_origin = image.copy()
     for box in original_boxes:
@@ -232,7 +221,19 @@ def show_boxes(boxes, original_boxes, image):
     cv.waitKey(0)
 
 
-def crop_boxes(boxes, image):
+def add_whitespaces(boxes):
+    mean = get_mean(boxes)
+    new_boxes = []
+    for i in range(len(boxes))[:-1]:
+        new_boxes.append(boxes[i])
+        distance = boxes[i+1].left - boxes[i].right
+        if distance > mean*0.7:
+            new_boxes.append(" ")
+    new_boxes.append(boxes[-1])
+    return new_boxes
+
+
+def crop_image_with_boxes(boxes, image):
     cropped_images = []
     for box in boxes:
         if box == ' ':
@@ -243,37 +244,40 @@ def crop_boxes(boxes, image):
     return cropped_images
 
 
-def image_paste(cropped_images):
+def img_to_input(cropped_images):
     edges_list = []
     for cropped_image in cropped_images:
-        blank_image = np.zeros((32, 32, 3), np.uint8)
-        blank_image.fill(255)
-        in_width = cropped_image.shape[1]
-        in_height = cropped_image.shape[0]
+        if cropped_image != ' ':
+            blank_image = np.zeros((32, 32, 3), np.uint8)
+            blank_image.fill(255)
+            in_width = cropped_image.shape[1]
+            in_height = cropped_image.shape[0]
 
-        if in_width > in_height:
-            scale_percent = 28 / in_width
-            width = int(cropped_image.shape[1] * scale_percent)
-            height = int(cropped_image.shape[0] * scale_percent)
-            x_offset = 2
-            y_offset = int((32 - height) / 2)
+            if in_width > in_height:
+                scale_percent = 28 / in_width
+                width = int(cropped_image.shape[1] * scale_percent)
+                height = int(cropped_image.shape[0] * scale_percent)
+                x_offset = 2
+                y_offset = int((32 - height) / 2)
 
-        elif in_width < in_height:
-            scale_percent = 28 / in_height
-            width = int(cropped_image.shape[1] * scale_percent)
-            height = int(cropped_image.shape[0] * scale_percent)
-            x_offset = int((32 - width) / 2)
-            y_offset = 2
+            elif in_width <= in_height:
+                scale_percent = 28 / in_height
+                width = int(cropped_image.shape[1] * scale_percent)
+                height = int(cropped_image.shape[0] * scale_percent)
+                x_offset = int((32 - width) / 2)
+                y_offset = 2
 
-        dim = (width, height)
-        cropped_image = cv.resize(cropped_image, dim, interpolation=cv.INTER_AREA)
-        blank_image[y_offset:y_offset + cropped_image.shape[0], x_offset:x_offset + cropped_image.shape[1]] = \
-            cropped_image
+            dim = (width, height)
+            cropped_image = cv.resize(cropped_image, dim, interpolation=cv.INTER_AREA)
+            blank_image[y_offset:y_offset + cropped_image.shape[0], x_offset:x_offset + cropped_image.shape[1]] = \
+                cropped_image
 
-        gray = cv.cvtColor(blank_image, cv.COLOR_BGR2GRAY)
-        gray = cv.bitwise_not(gray)
+            gray = cv.cvtColor(blank_image, cv.COLOR_BGR2GRAY)
+            gray = cv.bitwise_not(gray)
 
-        edges_list.append(gray)
+            edges_list.append(gray)
+        else:
+            edges_list.append(cropped_image)
     return edges_list
 
 
@@ -286,13 +290,11 @@ def img_segmentation(img_path):
     boxes = clean_boxes(boxes)
     show_boxes(boxes, original_boxes, image)
     contrast_img = contrast(image)
-    cropped_images = crop_boxes(boxes, contrast_img)
-    pasted_images = image_paste(cropped_images)
+    boxes = add_whitespaces(boxes)
+    cropped_images = crop_image_with_boxes(boxes, contrast_img)
+    pasted_images = img_to_input(cropped_images)
     return pasted_images
 
 
-images = img_segmentation('test_images/Screenshot 2021-05-18 at 09.34.59.png', 1)
+images = img_segmentation('test_images/hej_jag_heter_marcus.png')
 
-for image in images:
-    cv.imshow('image', image)
-    cv.waitKey(0)
