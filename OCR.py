@@ -40,7 +40,7 @@ def get_chars_digits():
 def ocr(img_src):
     model = load_model('training/models/no_digits_model')
 
-    images = img_segmentation(img_src, 0.7)
+    images = img_segmentation(img_src)
     chars = get_chars()
     print(len(images))
     result_string = ""

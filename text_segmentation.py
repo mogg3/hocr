@@ -46,7 +46,7 @@ def get_boxes(processed):
 
 def get_mean(boxes):
     box_width = sorted([box.width for box in boxes])
-    return np.mean(box_width)
+    return int(np.mean(box_width))
 
 
 def clean_boxes(boxes):
@@ -55,6 +55,7 @@ def clean_boxes(boxes):
 
 
 def erode(boxes, processed):
+    print('Eroding')
     boxes.clear()
     kernel = cv.getStructuringElement(cv.MORPH_RECT, (2, 6), (1, 1))
     eroded = cv.erode(processed, kernel, iterations=1)
@@ -70,9 +71,9 @@ def check_erode(boxes, processed):
     mean = get_mean(boxes)
     counter = 0
     for box in boxes:
-        if box.width > 80: # > mean*1.5
+        if box.width > mean:
             counter += 1
-    if counter >= 3: # >= 6
+    if counter >= 5:
         boxes = erode(boxes, processed)
     return boxes
 
@@ -107,16 +108,16 @@ def get_new_coordinates(box1, box2):
     return top_left, bottom_right
 
 
-def overlap_fix(boxes, image):
+def overlap_fix(boxes):
     new_boxes = []
     ignore = []
     overlapping = False
     for box in boxes:
         for other_box in boxes:
-            if inside_overlap(box, other_box, image) == 'inside' and box != other_box and box not in ignore:
+            if inside_overlap(box, other_box) == 'inside' and box != other_box and box not in ignore:
                 ignore.append(box)
                 overlapping = True
-            elif inside_overlap(box, other_box, image) == 'overlap' and box != other_box and box not in ignore:
+            elif inside_overlap(box, other_box) == 'overlap' and box != other_box and box not in ignore:
                 top_left, bottom_right = get_new_coordinates(box, other_box)
                 new_box = Box(top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1],
                               (255, 0, 255), 1)
@@ -131,16 +132,15 @@ def overlap_fix(boxes, image):
     return overlapping, sorted_list
 
 
-def fix_inside_overlapping(boxes, image):
+def fix_inside_overlapping(boxes):
     done = False
     while not done:
-        overlapping, boxes = overlap_fix(boxes, image)
+        overlapping, boxes = overlap_fix(boxes)
         if not overlapping:
             done = True
     return boxes
 
 
-<<<<<<< HEAD
 def divide_box(box, n, j, color):
     new_w = round((box.width / n))
     new_x = round(box.x + (new_w * j))
@@ -169,8 +169,8 @@ def check_boxes_to_divide(boxes):
                 n = round(box.width // mean*0.9)
                 color = (255, 0, 0)
                 print('Dividing big box')
-            elif round(box.width // (mean*0.7)) >= 2:
-                n = round(box.width // (mean*0.7))
+            elif round(box.width // (mean*0.8)) >= 2:
+                n = round(box.width // (mean*0.8))
                 color = (255, 125, 125)
                 print('Dividing smaller box')
             if n is not None:
@@ -194,17 +194,30 @@ def check_boxes_to_divide(boxes):
     return boxes
 
 
+def add_whitespaces(boxes):
+    mean = get_mean(boxes)
+    boxes_with_spaces = boxes.copy()
+    counter = 0
+    for i in range(len(boxes))[:-1]:
+        distance = boxes[i+1].left - boxes[i].right
+        if distance > mean*0.75:
+            boxes_with_spaces.insert(i+1+counter, ' ')
+            counter += 1
+    return boxes_with_spaces
+
+
 def show_boxes(boxes, original_boxes, image):
     image_origin = image.copy()
     for box in original_boxes:
         cv.rectangle(image_origin, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-    image_origin = cv.resize(image_origin, (image_origin.shape[1] * 3, image_origin.shape[0] * 2))
+    image_origin = cv.resize(image_origin, (int(image_origin.shape[1] / 3), int(image_origin.shape[0] / 3)))
     cv.imshow('origin', image_origin)
 
     image_cleaned = image.copy()
     for box in boxes:
-        cv.rectangle(image_cleaned, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-    image_cleaned = cv.resize(image_cleaned, (image_cleaned.shape[1] * 3, image_cleaned.shape[0] * 2))
+        if box != ' ':
+            cv.rectangle(image_cleaned, (box.x, box.y), box.bottom_right, box.color, box.thickness)
+    image_cleaned = cv.resize(image_cleaned, (int(image_cleaned.shape[1] / 3), int(image_cleaned.shape[0] / 3)))
     cv.imshow('cleaned', image_cleaned)
     cv.waitKey(0)
 
@@ -212,8 +225,11 @@ def show_boxes(boxes, original_boxes, image):
 def crop_boxes(boxes, image):
     cropped_images = []
     for box in boxes:
-        crop_image = image[box.y:(box.y + box.height), box.x:(box.x + box.width)].copy()
-        cropped_images.append(crop_image)
+        if box == ' ':
+            cropped_images.append(box)
+        else:
+            crop_image = image[box.y:(box.y + box.height), box.x:(box.x + box.width)].copy()
+            cropped_images.append(crop_image)
     return cropped_images
 
 
@@ -255,31 +271,21 @@ def img_segmentation(img_path):
     image = cv.imread(img_path)
     processed = process_img(image)
     original_boxes = get_boxes(processed)
-    boxes = fix_inside_overlapping(original_boxes, image)
+    boxes = fix_inside_overlapping(original_boxes)
     boxes = check_boxes_to_divide(boxes)
     boxes = clean_boxes(boxes)
+    boxes = add_whitespaces(boxes)
     show_boxes(boxes, original_boxes, cv.imread(img_path))
-    cropped_images = crop_boxes(boxes, image)
-    pasted_images = image_paste(cropped_images)
-    return pasted_images
+    # cropped_images = crop_boxes(boxes, image)
+    # pasted_images = image_paste(cropped_images)
+    # return pasted_images
 
-# for folder in os.listdir('data/lineimages/a01'):
-#     for img_path in os.listdir(f'data/lineimages/a01/{folder}'):
-#         img_segmentation(f'data/lineimages/a01/{folder}/{img_path}')
 
-img_segmentation('data/lineimages/a01/a01-001/a01-001w-02.tif ')
-# img_segmentation('data/lineimages/a01/a01-001/a01-001z-02.tif')
-# img_segmentation('data/lineimages/a01/a01-001/a01-001z-03.tif')
-# img_segmentation('data/lineimages/a01/a01-000/a01-000x-01.tif')
-# img_segmentation('data/lineimages/a01/a01-000/a01-000x-02.tif')
-# img_segmentation('data/lineimages/a01/a01-000/a01-000x-03.tif')
-# img_segmentation('data/lineimages/a01/a01-000/a01-000x-04.tif')
-# img_segmentation('data/lineimages/a01/a01-001/a01-001z-04.tif')
-
-# images = img_segmentation('input4.png')
-# for image in images:
-#     cv.imshow('image', image)
-#     cv.waitKey(0)
+img_segmentation('test_images/Sara_1.jpg ')
+img_segmentation('test_images/Sara_2.jpg ')
+img_segmentation('test_images/Sara_3.jpg ')
+img_segmentation('test_images/Sara_4.jpg ')
+img_segmentation('test_images/input.tif')
 
 
 # TODO's
