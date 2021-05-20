@@ -64,4 +64,4 @@ def ocr(img_src):
     print(result_string)
 
 
-ocr('small_letters1.png')
+ocr('test_images/small_letters1.png')

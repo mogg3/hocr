@@ -27,6 +27,16 @@ class Box:
         return f'x = {self.x} y = {self.y} width = {self.width} height = {self.height}'
 
 
+def contrast(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    mean = np.mean([pxl_val for row in gray for pxl_val in row])
+    gray = cv.bitwise_not(gray)
+    _, contrast = cv.threshold(gray, mean, 0, cv.THRESH_TOZERO)
+    contrast_inv = cv.bitwise_not(contrast)
+    backtorgb = cv.cvtColor(contrast_inv, cv.COLOR_GRAY2RGB)
+    return backtorgb
+
+
 def process_img(image):
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     _, processed = cv.threshold(gray, 127, 255, cv.THRESH_BINARY_INV)
@@ -274,22 +284,15 @@ def img_segmentation(img_path):
     boxes = fix_inside_overlapping(original_boxes)
     boxes = check_boxes_to_divide(boxes)
     boxes = clean_boxes(boxes)
-    boxes = add_whitespaces(boxes)
-    show_boxes(boxes, original_boxes, cv.imread(img_path))
-    # cropped_images = crop_boxes(boxes, image)
-    # pasted_images = image_paste(cropped_images)
-    # return pasted_images
+    show_boxes(boxes, original_boxes, image)
+    contrast_img = contrast(image)
+    cropped_images = crop_boxes(boxes, contrast_img)
+    pasted_images = image_paste(cropped_images)
+    return pasted_images
 
 
-img_segmentation('test_images/Sara_1.jpg ')
-img_segmentation('test_images/Sara_2.jpg ')
-img_segmentation('test_images/Sara_3.jpg ')
-img_segmentation('test_images/Sara_4.jpg ')
-img_segmentation('test_images/input.tif')
+images = img_segmentation('test_images/Screenshot 2021-05-18 at 09.34.59.png', 1)
 
-
-# TODO's
-# Exprementera med floor eller round division
-# Minska standarden man jämför boxarna med
-# Slå ihop lådor som ligger ovanför varandra?
-# Träna även modellen på stora bokstäver, nu tränas den bara på små.
+for image in images:
+    cv.imshow('image', image)
+    cv.waitKey(0)
