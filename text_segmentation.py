@@ -50,16 +50,22 @@ def get_boxes(processed):
     for i, ctr in enumerate(sorted_ctrs):
         x, y, w, h = cv.boundingRect(ctr)
         boxes.append(Box(x, y, w, h, (0, 0, 255), 1))
-    # boxes = check_erode(boxes, processed)
+    boxes = check_erode(boxes, processed)
     return boxes
 
 
+def get_mean(boxes):
+    box_width = sorted([box.width for box in boxes])
+    return int(np.mean(box_width))
+
+
 def clean_boxes(boxes):
-    return [box for box in boxes if box.height > 13]
+    mean = get_mean(boxes)
+    return [box for box in boxes if box.height > (mean*0.3)]
 
 
 def erode(boxes, processed):
-    print("Eroding")
+    print('Eroding')
     boxes.clear()
     kernel = cv.getStructuringElement(cv.MORPH_RECT, (2, 6), (1, 1))
     eroded = cv.erode(processed, kernel, iterations=1)
@@ -72,26 +78,25 @@ def erode(boxes, processed):
 
 
 def check_erode(boxes, processed):
-    box_width = sorted([box.width for box in boxes])
-    mean = np.mean(box_width)
+    mean = get_mean(boxes)
     counter = 0
     for box in boxes:
-        if box.width > mean * 1.5:
+        if box.width > mean:
             counter += 1
-    if counter >= 6:
+    if counter >= 5:
         boxes = erode(boxes, processed)
     return boxes
 
 
 def check_overlap(box1, box2):
-    if (box1.x >= (box2.width + box2.x)) or ((box1.width + box1.x) <= box2.x) or ((box1.y + box1.height) <= box2.y) or (
-            box1.y >= (box2.y + box2.height)):
+    if (box1.x >= (box2.width + box2.x)) or ((box1.width + box1.x) <= box2.x) or ((box1.y + box1.height) <= box2.y) or \
+            (box1.y >= (box2.y + box2.height)):
         return False
     else:
         return True
 
 
-def inside_overlap(box1, box2, image):
+def inside_overlap(box1, box2):
     # Inside if box1 is inside box2
     if (box2.left <= box1.left) and (box2.top <= box1.top) and (box2.right >= box1.right) \
             and (box2.bottom >= box1.bottom):
@@ -113,16 +118,16 @@ def get_new_coordinates(box1, box2):
     return top_left, bottom_right
 
 
-def overlap_fix(boxes, image):
+def overlap_fix(boxes):
     new_boxes = []
     ignore = []
     overlapping = False
     for box in boxes:
         for other_box in boxes:
-            if inside_overlap(box, other_box, image) == 'inside' and box != other_box and box not in ignore:
+            if inside_overlap(box, other_box) == 'inside' and box != other_box and box not in ignore:
                 ignore.append(box)
                 overlapping = True
-            elif inside_overlap(box, other_box, image) == 'overlap' and box != other_box and box not in ignore:
+            elif inside_overlap(box, other_box) == 'overlap' and box != other_box and box not in ignore:
                 top_left, bottom_right = get_new_coordinates(box, other_box)
                 new_box = Box(top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1],
                               (255, 0, 255), 1)
@@ -137,54 +142,92 @@ def overlap_fix(boxes, image):
     return overlapping, sorted_list
 
 
-def fix_inside_overlapping(boxes, image):
+def fix_inside_overlapping(boxes):
     done = False
     while not done:
-        overlapping, boxes = overlap_fix(boxes, image)
+        overlapping, boxes = overlap_fix(boxes)
         if not overlapping:
             done = True
     return boxes
 
 
-def divide_boxes(boxes, mean_scale):
+def divide_box(box, n, j, color):
+    new_w = round((box.width / n))
+    new_x = round(box.x + (new_w * j))
+    new_y = box.y
+    new_h = box.height
+    new_box = Box(new_x, new_y, new_w, new_h, color, 2)
+    return new_box
+
+
+def check_boxes_to_divide(boxes):
     box_width = sorted([box.width for box in boxes])
     box_height = sorted([box.height for box in boxes])
     mean_width = float(np.mean(box_width))
     mean_height = float(np.mean(box_height))
     mean_rectangle = Box(20, 20, round(mean_width), round(mean_height), (0, 0, 0), 1)
     # boxes.append(mean_rectangle)
-    if box_width[-1] >= mean_width * 2.2:
+    mean = get_mean(boxes)
+    box_width = sorted([box.width for box in boxes])
+
+    if box_width[-1] >= mean * 1.85: # *2.2
         new_boxes = []
         boxes_to_remove = []
-        for i, box in enumerate(boxes):
-            n = round(box.width // mean_width * mean_scale)
-            if n >= 2:
-                boxes_to_remove.append(box)
+        for box in boxes:
+            n = None
+            if round(box.width // (mean*0.9)) >= 2:
+                n = round(box.width // mean*0.9)
+                color = (255, 0, 0)
+                print('Dividing big box')
+            elif round(box.width // (mean*0.8)) >= 2:
+                n = round(box.width // (mean*0.8))
+                color = (255, 125, 125)
+                print('Dividing smaller box')
+            if n is not None:
                 for j in range(int(n)):
-                    new_w = round((box.width / n))
-                    new_x = round(box.x + (new_w * j))
-                    new_y = box.y
-                    new_h = box.height
-                    new_box = Box(new_x, new_y, new_w, new_h, (255, 0, 0), 2)
-                    new_boxes.append(new_box)
+                    boxes_to_remove.append(box)
+                    new_boxes.append(divide_box(box, n, j, color))
+
+        for box in new_boxes:
+            if round(box.width // (mean * 0.7)) >= 2:
+                n = round(box.width // (mean * 0.7))
+                for j in range(int(n)):
+                    boxes_to_remove.append(box)
+                    color = (125, 125, 125)
+                    print('Dividing again')
+                    new_boxes.append(divide_box(box, n, j, color))
         boxes = [box for box in boxes if box not in boxes_to_remove]
+
         new_list = boxes + new_boxes
         sorted_list = sorted(new_list, key=lambda box: box.x)
         return sorted_list
     return boxes
 
 
+def add_whitespaces(boxes):
+    mean = get_mean(boxes)
+    boxes_with_spaces = boxes.copy()
+    counter = 0
+    for i in range(len(boxes))[:-1]:
+        distance = boxes[i+1].left - boxes[i].right
+        if distance > mean*0.75:
+            boxes_with_spaces.insert(i+1+counter, ' ')
+            counter += 1
+    return boxes_with_spaces
+
+
 def show_boxes(boxes, original_boxes, image):
     image_origin = image.copy()
     for box in original_boxes:
         cv.rectangle(image_origin, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-    image_origin = cv.resize(image_origin, (image_origin.shape[1] * 3, image_origin.shape[0] * 2))
+    image_origin = cv.resize(image_origin, (int(image_origin.shape[1] / 3), int(image_origin.shape[0] / 3)))
     cv.imshow('origin', image_origin)
 
     image_cleaned = image.copy()
     for box in boxes:
-        cv.rectangle(image_cleaned, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-    image_cleaned = cv.resize(image_cleaned, (image_cleaned.shape[1] * 3, image_cleaned.shape[0] * 2))
+        if box != ' ':
+            cv.rectangle(image_cleaned, (box.x, box.y), box.bottom_right, box.color, box.thickness)
+    image_cleaned = cv.resize(image_cleaned, (int(image_cleaned.shape[1] / 3), int(image_cleaned.shape[0] / 3)))
     cv.imshow('cleaned', image_cleaned)
     cv.waitKey(0)
 
@@ -192,8 +235,11 @@ def show_boxes(boxes, original_boxes, image):
 def crop_boxes(boxes, image):
     cropped_images = []
     for box in boxes:
-        crop_image = image[box.y:(box.y + box.height), box.x:(box.x + box.width)].copy()
-        cropped_images.append(crop_image)
+        if box == ' ':
+            cropped_images.append(box)
+        else:
+            crop_image = image[box.y:(box.y + box.height), box.x:(box.x + box.width)].copy()
+            cropped_images.append(crop_image)
     return cropped_images
 
 
@@ -209,23 +255,20 @@ def image_paste(cropped_images):
             scale_percent = 28 / in_width
             width = int(cropped_image.shape[1] * scale_percent)
             height = int(cropped_image.shape[0] * scale_percent)
-            dim = (width, height)
-            cropped_image = cv.resize(cropped_image, dim, interpolation=cv.INTER_AREA)
             x_offset = 2
             y_offset = int((32 - height) / 2)
-            blank_image[y_offset:y_offset + cropped_image.shape[0], x_offset:x_offset + cropped_image.shape[1]] = \
-                cropped_image
 
         elif in_width < in_height:
             scale_percent = 28 / in_height
             width = int(cropped_image.shape[1] * scale_percent)
             height = int(cropped_image.shape[0] * scale_percent)
-            dim = (width, height)
-            cropped_image = cv.resize(cropped_image, dim, interpolation=cv.INTER_AREA)
             x_offset = int((32 - width) / 2)
             y_offset = 2
-            blank_image[y_offset:y_offset + cropped_image.shape[0], x_offset:x_offset + cropped_image.shape[1]] = \
-                cropped_image
+
+        dim = (width, height)
+        cropped_image = cv.resize(cropped_image, dim, interpolation=cv.INTER_AREA)
+        blank_image[y_offset:y_offset + cropped_image.shape[0], x_offset:x_offset + cropped_image.shape[1]] = \
+            cropped_image
 
         gray = cv.cvtColor(blank_image, cv.COLOR_BGR2GRAY)
         gray = cv.bitwise_not(gray)
@@ -234,27 +277,20 @@ def image_paste(cropped_images):
     return edges_list
 
 
-def img_segmentation(img_path, mean_scale):
+def img_segmentation(img_path):
     image = cv.imread(img_path)
     processed = process_img(image)
     original_boxes = get_boxes(processed)
-    boxes = fix_inside_overlapping(original_boxes, image)
-    boxes = divide_boxes(boxes, mean_scale)
+    boxes = fix_inside_overlapping(original_boxes)
+    boxes = check_boxes_to_divide(boxes)
     boxes = clean_boxes(boxes)
-
     show_boxes(boxes, original_boxes, image)
-
     contrast_img = contrast(image)
     cropped_images = crop_boxes(boxes, contrast_img)
     pasted_images = image_paste(cropped_images)
     return pasted_images
 
 
-# TODO's
-# Exprementera med floor eller round division
-# Minska standarden man jämför boxarna med
-# Slå ihop lådor som ligger ovanför varandra?
-# Träna även modellen på stora bokstäver, nu tränas den bara på små.
 images = img_segmentation('test_images/Screenshot 2021-05-18 at 09.34.59.png', 1)
 
 for image in images:
