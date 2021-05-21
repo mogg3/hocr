@@ -49,13 +49,13 @@ def get_boxes(processed):
     boxes = []
     for i, ctr in enumerate(sorted_ctrs):
         x, y, w, h = cv.boundingRect(ctr)
-        boxes.append(Box(x, y, w, h, (0, 0, 255), 2))
+        boxes.append(Box(x, y, w, h, (0, 0, 0), 2))
     boxes = check_erode(boxes, processed)
     return boxes
 
 
 def get_mean(boxes):
-    box_width = sorted([box.width for box in boxes])
+    box_width = [box.width for box in boxes]
     return int(np.mean(box_width))
 
 
@@ -65,7 +65,6 @@ def clean_boxes(boxes):
 
 
 def erode(boxes, processed):
-    print('Eroding')
     boxes.clear()
     kernel = cv.getStructuringElement(cv.MORPH_RECT, (2, 6), (1, 1))
     eroded = cv.erode(processed, kernel, iterations=1)
@@ -161,12 +160,6 @@ def divide_box(box, n, j, color):
 
 
 def check_boxes_to_divide(boxes):
-    box_width = sorted([box.width for box in boxes])
-    box_height = sorted([box.height for box in boxes])
-    mean_width = float(np.mean(box_width))
-    mean_height = float(np.mean(box_height))
-    mean_rectangle = Box(20, 20, round(mean_width), round(mean_height), (0, 0, 0), 1)
-    # boxes.append(mean_rectangle)
     mean = get_mean(boxes)
     box_width = sorted([box.width for box in boxes])
 
@@ -206,29 +199,32 @@ def check_boxes_to_divide(boxes):
     return boxes
 
 
-def show_boxes(boxes, original_boxes, image):
-    image_origin = image.copy()
-    for box in original_boxes:
-        cv.rectangle(image_origin, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-    image_origin = cv.resize(image_origin, (int(image_origin.shape[1] / 3), int(image_origin.shape[0] / 3)))
-    cv.imshow('origin', image_origin)
-
-    image_cleaned = image.copy()
+def show_boxes(boxes, image):
+    image = image.copy()
     for box in boxes:
         if box != ' ':
-            cv.rectangle(image_cleaned, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-    image_cleaned = cv.resize(image_cleaned, (int(image_cleaned.shape[1] / 3), int(image_cleaned.shape[0] / 3)))
-    cv.imshow('cleaned', image_cleaned)
+            cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
+    image = cv.resize(image, (int(image.shape[1] / 3), int(image.shape[0] / 3)))
+    cv.imshow('cleaned', image)
     cv.waitKey(0)
 
 
+def get_mean_distance(boxes):
+    mean = 0
+    for i in range(1, len(boxes)):
+        if boxes[i-1].right < boxes[i].left:
+            mean += boxes[i].left - boxes[i - 1].right
+    return mean / len(boxes)
+
+
 def add_whitespaces(boxes):
-    mean = get_mean(boxes)
+    mean_distance = get_mean_distance(boxes)
     new_boxes = []
+    percentage = 1.8
     for i in range(len(boxes))[:-1]:
         new_boxes.append(boxes[i])
         distance = boxes[i+1].left - boxes[i].right
-        if distance > mean*0.7:
+        if distance > mean_distance * percentage:
             new_boxes.append(" ")
     new_boxes.append(boxes[-1])
     return new_boxes
@@ -240,7 +236,7 @@ def crop_image_with_boxes(boxes, image):
         if box == ' ':
             cropped_images.append(box)
         else:
-            crop_image = image[box.y:(box.y + box.height), box.x:(box.x + box.width)].copy()
+            crop_image = image[box.y:box.bottom, box.x:box.right].copy()
             cropped_images.append(crop_image)
     return cropped_images
 
@@ -248,25 +244,25 @@ def crop_image_with_boxes(boxes, image):
 def img_to_input(cropped_images):
     edges_list = []
     for cropped_image in cropped_images:
-        if cropped_image != ' ':
+        if type(cropped_image) != str:
             blank_image = np.zeros((32, 32, 3), np.uint8)
             blank_image.fill(255)
             in_width = cropped_image.shape[1]
             in_height = cropped_image.shape[0]
 
             if in_width > in_height:
-                scale_percent = 28 / in_width
+                scale_percent = 24 / in_width
                 width = int(cropped_image.shape[1] * scale_percent)
                 height = int(cropped_image.shape[0] * scale_percent)
-                x_offset = 2
+                x_offset = 4
                 y_offset = int((32 - height) / 2)
 
             elif in_width <= in_height:
-                scale_percent = 28 / in_height
+                scale_percent = 24 / in_height
                 width = int(cropped_image.shape[1] * scale_percent)
                 height = int(cropped_image.shape[0] * scale_percent)
                 x_offset = int((32 - width) / 2)
-                y_offset = 2
+                y_offset = 4
 
             dim = (width, height)
             cropped_image = cv.resize(cropped_image, dim, interpolation=cv.INTER_AREA)
@@ -285,19 +281,16 @@ def img_to_input(cropped_images):
 def img_segmentation(img_path):
     image = cv.imread(img_path)
     processed = process_img(image)
+
     original_boxes = get_boxes(processed)
     boxes = fix_inside_overlapping(original_boxes)
-    boxes = check_boxes_to_divide(boxes)
+    # boxes = check_boxes_to_divide(boxes)
     boxes = clean_boxes(boxes)
-    show_boxes(boxes, original_boxes, image)
-    contrast_img = contrast(image)
     boxes = add_whitespaces(boxes)
+    show_boxes(boxes, image)
+
+    contrast_img = contrast(image)
     cropped_images = crop_image_with_boxes(boxes, contrast_img)
     pasted_images = img_to_input(cropped_images)
     return pasted_images
-
-images = img_segmentation('test_images/Sara_1.jpg')
-images = img_segmentation('test_images/Sara_2.jpg')
-images = img_segmentation('test_images/Sara_3.jpg')
-images = img_segmentation('test_images/Sara_4.jpg')
 
