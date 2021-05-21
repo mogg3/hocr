@@ -12,13 +12,13 @@ import pickle
 
 
 def new_model(model_name, seed, img_am, epochs, s):
-    model, chars = train_model(seed, img_am, epochs, s)
+    model = train_model(seed, img_am, epochs, s)
     model.save(f'training/models/{model_name}')
-    return model, chars
+    return model
 
 
 def load_model(model_name):
-    return keras.models.load_model(f"training/models/{model_name}")
+    return keras.models.load_model(f"training/modelss/{model_name}")
 
 
 def sorted_alphanumeric(data):
@@ -105,7 +105,7 @@ def get_data(src, img_am, s):
     y = np.array(char_dict['char'])
     y = le.fit_transform(y)
     feature_names = [value[2] for value in le.get_feature_names()]
-    with open('training/feature_names.txt', 'wb') as file:
+    with open(f'training/feature_names/feature_names{s}.txt', 'wb') as file:
         pickle.dump(feature_names, file)
     split = int(round(0.9 * len(X)))
 
@@ -122,7 +122,7 @@ def get_data(src, img_am, s):
 
 def train_model(seed, img_am, epochs, s):
 
-    train_X, train_y, test_X, test_y = get_data(r"../data/training_data", img_am, s)
+    train_X, train_y, test_X, test_y = get_data(r"data/training_data", img_am, s)
     tf.random.set_seed(seed)
 
     model = tf.keras.Sequential()
@@ -137,7 +137,7 @@ def train_model(seed, img_am, epochs, s):
 
     model.add(Flatten())
     model.add(Dense(128, activation='relu'))
-    model.add(Dense(29, activation='softmax'))
+    model.add(Dense(29+s-3, activation='softmax'))
 
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
