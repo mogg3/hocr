@@ -49,7 +49,7 @@ def get_boxes(processed):
     boxes = []
     for i, ctr in enumerate(sorted_ctrs):
         x, y, w, h = cv.boundingRect(ctr)
-        boxes.append(Box(x, y, w, h, (0, 0, 255), 1))
+        boxes.append(Box(x, y, w, h, (0, 0, 255), 2))
     boxes = check_erode(boxes, processed)
     return boxes
 
@@ -118,7 +118,6 @@ def get_new_coordinates(box1, box2):
     return top_left, bottom_right
 
 
-
 def overlap_fix(boxes):
     new_boxes = []
     ignore = []
@@ -180,14 +179,16 @@ def check_boxes_to_divide(boxes):
                 n = round(box.width // mean*0.9)
                 color = (255, 0, 0)
                 print('Dividing big box')
-            elif round(box.width // (mean*0.8)) >= 2:
-                n = round(box.width // (mean*0.8))
+            elif round(box.width // (mean*0.68)) >= 2:
+                n = round(box.width // (mean*0.68))
                 color = (255, 125, 125)
                 print('Dividing smaller box')
             if n is not None:
                 for j in range(int(n)):
                     boxes_to_remove.append(box)
                     new_boxes.append(divide_box(box, n, j, color))
+        boxes = [box for box in boxes if box not in boxes_to_remove]
+        boxes_to_remove.clear()
 
         for box in new_boxes:
             if round(box.width // (mean * 0.7)) >= 2:
@@ -197,7 +198,7 @@ def check_boxes_to_divide(boxes):
                     color = (125, 125, 125)
                     print('Dividing again')
                     new_boxes.append(divide_box(box, n, j, color))
-        boxes = [box for box in boxes if box not in boxes_to_remove]
+        new_boxes = [box for box in new_boxes if box not in boxes_to_remove]
 
         new_list = boxes + new_boxes
         sorted_list = sorted(new_list, key=lambda box: box.x)
@@ -295,6 +296,8 @@ def img_segmentation(img_path):
     pasted_images = img_to_input(cropped_images)
     return pasted_images
 
-
-images = img_segmentation('test_images/hej_jag_heter_marcus.png')
+images = img_segmentation('test_images/Sara_1.jpg')
+images = img_segmentation('test_images/Sara_2.jpg')
+images = img_segmentation('test_images/Sara_3.jpg')
+images = img_segmentation('test_images/Sara_4.jpg')
 
