@@ -1,12 +1,10 @@
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
 import cv2 as cv
 import os
 import re
 from tensorflow import keras
 from tensorflow.keras.layers import *
-import time
 import category_encoders as ce
 import pickle
 
@@ -18,7 +16,7 @@ def new_model(model_name, seed, img_am, epochs, s):
 
 
 def load_model(model_name):
-    return keras.models.load_model(f"training/modelss/{model_name}")
+    return keras.models.load_model(f"training/models/{model_name}")
 
 
 def sorted_alphanumeric(data):
@@ -58,7 +56,6 @@ def get_dict(src, img_am, s):
     splits = ['A', 'H', 'E', 'F', 'G', 'B', 'Q', 'R']
     split = splits[:s]
 
-    start = time.time()
     char_dict = {"char": [], "matrix": []}
     char_set = dict()
     ignore = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.DS_Store', 'Q', 'X']
@@ -93,8 +90,6 @@ def get_dict(src, img_am, s):
                 char_dict["matrix"].append(img)
         counter -= 1
 
-    stop = time.time()
-    print(stop-start, 'seconds')
     return char_dict
 
 
@@ -121,7 +116,6 @@ def get_data(src, img_am, s):
 
 
 def train_model(seed, img_am, epochs, s):
-
     train_X, train_y, test_X, test_y = get_data(r"data/training_data", img_am, s)
     tf.random.set_seed(seed)
 
@@ -143,11 +137,8 @@ def train_model(seed, img_am, epochs, s):
                   optimizer='adam',
                   metrics=['accuracy'])
 
-    print('Fitting...')
     model.fit(train_X, train_y, epochs=epochs)
-    print('Done fitting...')
     results = model.evaluate(test_X, test_y)
-    print(results)
 
     return model
 
