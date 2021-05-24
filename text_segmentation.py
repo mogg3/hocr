@@ -1,12 +1,9 @@
 import cv2 as cv
 import numpy as np
-import os
-import time
-import copy
 
 
 class Box:
-    def __init__(self, x, y, width, height, color, thickness):
+    def __init__(self, x, y, width, height, color=(0, 0, 0), thickness=2):
         self.x = x
         self.y = y
         self.width = width
@@ -47,9 +44,9 @@ def get_boxes(processed):
     ctrs, hier = cv.findContours(processed, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     sorted_ctrs = sorted(ctrs, key=lambda contour: cv.boundingRect(contour)[0])
     boxes = []
-    for i, ctr in enumerate(sorted_ctrs):
+    for ctr in sorted_ctrs:
         x, y, w, h = cv.boundingRect(ctr)
-        boxes.append(Box(x, y, w, h, (0, 0, 0), 2))
+        boxes.append(Box(x, y, w, h))
     boxes = check_erode(boxes, processed)
     return boxes
 
@@ -61,7 +58,8 @@ def get_mean(boxes):
 
 def clean_boxes(boxes):
     mean = get_mean(boxes)
-    return [box for box in boxes if box.height > (mean*0.3)]
+    SMALL_BOX_SCALE = 0.3
+    return [box for box in boxes if box.height > (mean*SMALL_BOX_SCALE)]
 
 
 def erode(boxes, processed):
@@ -70,9 +68,9 @@ def erode(boxes, processed):
     eroded = cv.erode(processed, kernel, iterations=1)
     ctrs, hier = cv.findContours(eroded, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     sorted_ctrs = sorted(ctrs, key=lambda contour: cv.boundingRect(contour)[0])
-    for i, ctr in enumerate(sorted_ctrs):
+    for ctr in sorted_ctrs:
         x, y, w, h = cv.boundingRect(ctr)
-        boxes.append(Box(x, y, w, h, (0, 255, 0), 2))
+        boxes.append(Box(x, y, w, h))
     return boxes
 
 
@@ -96,14 +94,14 @@ def check_overlap(box1, box2):
 
 
 def inside_overlap(box1, box2):
+    PADDING = 15
     # Inside if box1 is inside box2
     if (box2.left <= box1.left) and (box2.top <= box1.top) and (box2.right >= box1.right) \
             and (box2.bottom >= box1.bottom):
         return 'inside'
     # Overlap if box1 overlaps box2
     elif check_overlap(box2, box1):
-        n = 15
-        if (box2.left - n <= box1.left <= box2.left) or (box2.right <= box1.right <= box2.right + n):
+        if (box2.left - PADDING <= box1.left <= box2.left) or (box2.right <= box1.right <= box2.right + PADDING):
             return 'overlap'
     else:
         return False
@@ -128,8 +126,7 @@ def overlap_fix(boxes):
                 overlapping = True
             elif inside_overlap(box, other_box) == 'overlap' and box != other_box and box not in ignore:
                 top_left, bottom_right = get_new_coordinates(box, other_box)
-                new_box = Box(top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1],
-                              (255, 0, 255), 1)
+                new_box = Box(top_left[0], top_left[1], bottom_right[0] - top_left[0], bottom_right[1] - top_left[1])
                 new_boxes.append(new_box)
                 ignore.append(box)
                 ignore.append(other_box)
@@ -150,47 +147,46 @@ def fix_inside_overlapping(boxes):
     return boxes
 
 
-def divide_box(box, n, j, color):
+def divide_box(box, n, j):
     new_w = round((box.width / n))
     new_x = round(box.x + (new_w * j))
     new_y = box.y
     new_h = box.height
-    new_box = Box(new_x, new_y, new_w, new_h, color, 2)
+    new_box = Box(new_x, new_y, new_w, new_h)
     return new_box
 
 
 def check_boxes_to_divide(boxes):
+    LARGEST_BOX_SCALE = 1.85
+    SIZE_CUT_OFF = 2
+    BIG_BOX_SCALE = 0.9
+    MEDIUM_BOX_SCALE = 0.68
+
     mean = get_mean(boxes)
     box_width = sorted([box.width for box in boxes])
 
-    if box_width[-1] >= mean * 1.85: # *2.2
+    if box_width[-1] >= mean * LARGEST_BOX_SCALE:
         new_boxes = []
         boxes_to_remove = []
         for box in boxes:
             n = None
-            if round(box.width // (mean*0.9)) >= 2:
-                n = round(box.width // mean*0.9)
-                color = (255, 0, 0)
-                print('Dividing big box')
-            elif round(box.width // (mean*0.68)) >= 2:
-                n = round(box.width // (mean*0.68))
-                color = (255, 125, 125)
-                print('Dividing smaller box')
+            if box.width // (mean*BIG_BOX_SCALE) >= SIZE_CUT_OFF:
+                n = box.width // mean*BIG_BOX_SCALE
+            elif box.width // (mean*MEDIUM_BOX_SCALE) >= SIZE_CUT_OFF:
+                n = box.width // (mean*MEDIUM_BOX_SCALE)
             if n is not None:
                 for j in range(int(n)):
                     boxes_to_remove.append(box)
-                    new_boxes.append(divide_box(box, n, j, color))
+                    new_boxes.append(divide_box(box, n, j))
         boxes = [box for box in boxes if box not in boxes_to_remove]
         boxes_to_remove.clear()
 
         for box in new_boxes:
-            if round(box.width // (mean * 0.7)) >= 2:
-                n = round(box.width // (mean * 0.7))
+            if box.width // (mean * MEDIUM_BOX_SCALE) >= SIZE_CUT_OFF:
+                n = box.width // (mean * MEDIUM_BOX_SCALE)
                 for j in range(int(n)):
                     boxes_to_remove.append(box)
-                    color = (125, 125, 125)
-                    print('Dividing again')
-                    new_boxes.append(divide_box(box, n, j, color))
+                    new_boxes.append(divide_box(box, n, j))
         new_boxes = [box for box in new_boxes if box not in boxes_to_remove]
 
         new_list = boxes + new_boxes
@@ -200,11 +196,12 @@ def check_boxes_to_divide(boxes):
 
 
 def show_boxes(boxes, image):
+    SCALE = 0.33
     image = image.copy()
     for box in boxes:
         if box != ' ':
             cv.rectangle(image, (box.x, box.y), box.bottom_right, box.color, box.thickness)
-    image = cv.resize(image, (int(image.shape[1] / 3), int(image.shape[0] / 3)))
+    image = cv.resize(image, (int(image.shape[1] * SCALE), int(image.shape[0] * SCALE)))
     cv.imshow('cleaned', image)
     cv.waitKey(0)
 
@@ -220,11 +217,11 @@ def get_mean_distance(boxes):
 def add_whitespaces(boxes):
     mean_distance = get_mean_distance(boxes)
     new_boxes = []
-    percentage = 1.8
+    PERCENTAGE = 1.8
     for i in range(len(boxes))[:-1]:
         new_boxes.append(boxes[i])
         distance = boxes[i+1].left - boxes[i].right
-        if distance > mean_distance * percentage:
+        if distance > mean_distance * PERCENTAGE:
             new_boxes.append(" ")
     new_boxes.append(boxes[-1])
     return new_boxes
@@ -284,7 +281,7 @@ def img_segmentation(img_path):
 
     original_boxes = get_boxes(processed)
     boxes = fix_inside_overlapping(original_boxes)
-    # boxes = check_boxes_to_divide(boxes)
+    boxes = check_boxes_to_divide(boxes)
     boxes = clean_boxes(boxes)
     boxes = add_whitespaces(boxes)
     show_boxes(boxes, image)
